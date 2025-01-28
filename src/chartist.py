@@ -14,6 +14,8 @@ from pydantic import BaseModel
 import pandas as pd
 import json
 import numpy as np
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 
 logger = logging.getLogger(__name__)
 
@@ -80,6 +82,8 @@ class chartist:
         self.aws_profile = os.getenv("AWS_PROFILE")
         self.region_name = region_name
 
+        self.visualizations = None
+
         # Configure AWS session
         try:
             self.session = boto3.Session(
@@ -127,11 +131,12 @@ class chartist:
         }
         return descriptions.get(preset, "Unknown preset")
 
-    def visualise_ideas(
+    def generate_ideas(
         self, df: pd.DataFrame, prompt: str, preset: str = "default", **model_params
     ):
         """
-        Send DataFrame to Claude via AWS Bedrock with preset or custom parameters.
+        Send DataFrame to Claude via AWS Bedrock with preset or custom parameters and generate some ideas
+        for charts.
 
         Parameters:
         df: DataFrame to analyze
@@ -170,15 +175,10 @@ class chartist:
             Statistical Summary:
             {data_info['summary']}
             
-            Your request: {prompt}
+            Please suggest different visualizations that would be useful for analyzing this data.
+            For each visualization, provide a clear description of what it shows and why it's useful.
+            Consider all possible meaningful visualizations that could provide insights from this data.
             """
-
-        # Prepare the request body
-        body = {
-            "anthropic_version": "bedrock-2023-05-31",
-            "max_tokens": 1000,
-            "messages": [{"role": "user", "content": message_content}],
-        }
 
         # Create ModelInput directly
         model_input = ModelInput(
@@ -198,6 +198,155 @@ class chartist:
         except Exception as e:
             return f"Error processing request: {str(e)}"
 
+    def visualise_ideas(self, df: pd.DataFrame, claude_response: str):
+        """
+        Generate Plotly visualization code based on Claude's response.
+
+        Parameters:
+        df: The full DataFrame to visualize
+        claude_response: The response from generate_ideas
+
+        Returns:
+        Dict: Dictionary of visualization details including description and plotly code
+        """
+        prompt = f"""
+            Based on the previous visualization suggestions:
+
+            {claude_response}
+
+            Please generate a JSON dictionary where each key is a sequential number (starting from 1) and each value is an object containing:
+            1. 'description': The original description of the visualization
+            2. 'plotly_code': The complete Plotly code using ONLY Plotly Graph Objects (go), not Plotly Express.
+
+            Generate code for ALL suggested visualizations from the previous response.
+
+            Requirements for the code:
+            - Use 'import plotly.graph_objects as go' and 'from plotly.subplots import make_subplots'
+            - Use Graph Objects (go) for all visualizations
+            - Include proper layout configurations (titles, axes labels, etc.)
+            - Assume the DataFrame is named 'df'
+            - Include color configurations and hover templates
+            - Ensure all code is complete and can be executed independently
+
+            Format the response as a valid JSON string that can be parsed directly.
+            Include ALL visualizations mentioned in the previous response.
+        """
+
+        # Create ModelInput for code generation
+        model_input = ModelInput(
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.2,  # Lower temperature for more precise code generation
+            max_tokens=4000,  # Increased tokens for detailed code
+        )
+
+        try:
+            # Get response from Claude
+            response = self.bedrock.invoke_model(
+                modelId="anthropic.claude-3-sonnet-20240229-v1:0",
+                body=model_input.to_json(),
+            )
+
+            # Parse response
+            response_body = json.loads(response["body"].read())
+            response_text = response_body["content"][0]["text"]
+
+            # Extract JSON from response
+            json_start = response_text.find("{")
+            json_end = response_text.rfind("}") + 1
+            json_str = response_text[json_start:json_end]
+
+            # Parse JSON string
+            visualizations = json.loads(json_str)
+
+            return visualizations
+
+        except Exception as e:
+            return f"Error generating visualizations: {str(e)}"
+
+    def generate_and_store_visualizations(self, df: pd.DataFrame, prompt: str):
+        """
+        Generate and store visualizations for later use
+
+        Parameters:
+        df: DataFrame to visualize
+        prompt: Prompt for visualization suggestions
+
+        Returns:
+        dict: Dictionary of visualizations
+        """
+        try:
+            # Get visualization ideas
+            ideas_response = self.generate_ideas(df, prompt)
+
+            # Generate visualization code
+            visualizations = self.visualise_ideas(df, ideas_response)
+
+            # Store visualizations in instance
+            if isinstance(visualizations, dict):
+                self.visualizations = visualizations
+                return self.visualizations
+            else:
+                print("Error: Failed to generate valid visualizations")
+                return None
+
+        except Exception as e:
+            print(f"Error generating visualizations: {str(e)}")
+            return None
+
+    def list_visualizations(self, visualizations: dict):
+        """
+        List all available visualizations and their descriptions
+        """
+        if not visualizations or not isinstance(visualizations, dict):
+            print("No valid visualizations available")
+            return
+
+        print("\nAvailable Visualizations:")
+        for num, viz in visualizations.items():
+            print(f"\n{num}. {viz['description']}")
+
+    # Add helper method to execute visualization
+    def execute_visualization(self, df: pd.DataFrame, viz_number: str):
+        """
+        Execute a specific visualization and return the figure
+
+        Parameters:
+        df: DataFrame to visualize
+        viz_number: Visualization number as string
+
+        Returns:
+        plotly.graph_objects.Figure: The generated figure
+        """
+        if not self.visualizations:
+            print("No visualizations stored. Generate visualizations first.")
+            return None
+
+        try:
+            if viz_number in self.visualizations:
+                viz = self.visualizations[viz_number]
+                print(f"\nExecuting visualization {viz_number}:")
+                print(f"Description: {viz['description']}\n")
+
+                # Create namespace with required imports
+                namespace = {"df": df, "go": go, "make_subplots": make_subplots}
+
+                # Execute code
+                exec(viz["plotly_code"], namespace)
+
+                # Return the figure from the namespace
+                if "fig" in namespace:
+                    return namespace["fig"]
+                else:
+                    print("No figure found in visualization code")
+                    return None
+            else:
+                print(f"Visualization {viz_number} not found")
+                return None
+
+        except Exception as e:
+            print(f"Error executing visualization: {str(e)}")
+            return None
+
     @staticmethod
     def create_sample_dataset():
         """Create a sample dataset for testing"""
@@ -215,9 +364,6 @@ class chartist:
         )
 
         return sample_df
-
-    def visual_ideas_example():
-        load_dotenv()
 
 
 def main():

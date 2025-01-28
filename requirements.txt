@@ -3,3 +3,6 @@ anthropic
 boto3
 python-dotenv
 numpy
+plotly
+nbformat
+ipywidgets
