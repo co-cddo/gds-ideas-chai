@@ -1,8 +1,12 @@
 pandas
-anthropic
 boto3
-python-dotenv
 numpy
-plotly
+python-dotenv
 nbformat
 ipywidgets
+langchain
+langchain_aws
+langchain_community
+langchain_experimental
+plotly
+ipykernel
