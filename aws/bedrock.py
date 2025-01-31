@@ -1,4 +1,5 @@
 import logging
+import boto3
 
 from langchain_aws import ChatBedrock
 
@@ -22,3 +23,7 @@ class BedrockHandler:
         except Exception as e:
             logger.error(f"Error creating ChatBedrock LLM instance: {str(e)}")
             raise
+
+    def set_runtime(self):
+        bedrock = boto3.client(service_name="bedrock-runtime", region_name=self.region)
+        return bedrock
