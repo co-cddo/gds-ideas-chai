@@ -65,6 +65,6 @@ def create_formatting_tool() -> Tool:
     return Tool(
         name="format_visualization_output",
         func=formatter.format_visualization_output,
-        description="Formats DataFrame visualization suggestions in a clear, structured way. Use this tool to format your final output.",
+        description="Formats DataFrame visualisation suggestions in a clear, structured way. Use this tool to format your final output when asked to visualise possible charts from a dataframe",
         return_direct=True,
     )
