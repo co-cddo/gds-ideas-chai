@@ -19,8 +19,8 @@ from langchain.agents import (
 )
 
 # Import custom classes and tools
-from config import Config
-from aws.bedrock import BedrockHandler
+from chAI.config import Config
+from chAI.bedrock import BedrockHandler
 from tools.visualisation_formatter import create_formatting_tool
 from tools.image_analysis_formatter import create_analysis_formatter_tool
 from tools.save_plotly import create_save_plotly_tool

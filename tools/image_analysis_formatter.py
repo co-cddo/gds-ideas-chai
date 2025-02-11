@@ -1,17 +1,11 @@
 from typing import Dict, Any, List
-from langchain.tools import Tool, StructuredTool
-from pydantic import BaseModel
-import json
-from config import Config
-from aws.bedrock import BedrockHandler
+from langchain.tools import Tool
 import logging
+from typing import Dict
+import re
+
 
 logger = logging.getLogger()
-
-
-from typing import Dict
-import json
-import re
 
 
 class ImageAnalysisFormatter:
