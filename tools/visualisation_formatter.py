@@ -7,9 +7,9 @@ class DataFrameOutputFormatter:
     """Tool for formatting DataFrame analysis output"""
 
     @staticmethod
-    def format_visualization_output(analysis: str) -> str:
+    def format_visualisation_output(analysis: str) -> str:
         """
-        Format visualization suggestions in a structured way
+        Format visualisation suggestions in a structured way
 
         Args:
             analysis (str): Raw analysis text
@@ -18,14 +18,14 @@ class DataFrameOutputFormatter:
             str: Formatted analysis
         """
         try:
-            # Split into individual visualization sections
+            # Split into individual visualisation sections
             sections = analysis.split("\n\n")
-            formatted_output = ["📊 VISUALIZATION SUGGESTIONS:\n"]
+            formatted_output = ["📊 VISUALISATION SUGGESTIONS:\n"]
 
             current_section = []
             for section in sections:
                 if section.strip():
-                    # Check if this is a new visualization section
+                    # Check if this is a new visualisation section
                     if any(section.strip().startswith(str(i)) for i in range(1, 10)):
                         # Add previous section if it exists
                         if current_section:
@@ -63,8 +63,8 @@ def create_formatting_tool() -> Tool:
     formatter = DataFrameOutputFormatter()
 
     return Tool(
-        name="format_visualization_output",
-        func=formatter.format_visualization_output,
+        name="format_visualisation_output",
+        func=formatter.format_visualisation_output,
         description="Formats DataFrame visualisation suggestions in a clear, structured way. Use this tool to format your final output when asked to visualise possible charts from a dataframe",
         return_direct=True,
     )

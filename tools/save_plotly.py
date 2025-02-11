@@ -12,9 +12,9 @@ class PlotlyPlotter:
     """Tool for saving plotly code into an HTML"""
 
     @staticmethod
-    def save_plotly_visualization(plotly_code: str, output_path: str = None) -> str:
+    def save_plotly_visualisation(plotly_code: str, output_path: str = None) -> str:
         """
-        Execute Plotly code and save the resulting visualization as an HTML file.
+        Execute Plotly code and save the resulting visualisation as an HTML file.
 
         Parameters:
             plotly_code (str): String containing valid Plotly Python code
@@ -42,17 +42,17 @@ class PlotlyPlotter:
 
             # Generate output path if not provided
             if output_path is None:
-                output_dir = Path.home() / "plotly_visualizations"
+                output_dir = Path.home() / "plotly_visualisations"
                 output_dir.mkdir(exist_ok=True)
-                output_path = output_dir / f"visualization_{int(time.time())}.html"
+                output_path = output_dir / f"visualisation_{int(time.time())}.html"
 
             # Save the figure
             pio.write_html(fig, str(output_path))
 
-            return f"Visualization saved successfully to: {output_path}"
+            return f"Visualisation saved successfully to: {output_path}"
 
         except Exception as e:
-            logger.error(f"Error saving Plotly visualization: {str(e)}")
+            logger.error(f"Error saving Plotly visualisation: {str(e)}")
             return f"Failed to save visualisation: {str(e)}"
 
 
@@ -61,6 +61,6 @@ def create_save_plotly_tool() -> Tool:
 
     return Tool(
         name="save_plotly_as_html",
-        func=saver.save_plotly_visualization,
+        func=saver.save_plotly_visualisation,
         description="Saves Plotly visualisation code as an HTML file",
     )

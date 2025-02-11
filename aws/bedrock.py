@@ -11,6 +11,7 @@ class BedrockHandler:
         logger.info("Initializing BedrockHandler")
         self.region = config.LLM_REGION
         self.model_id = config.LLM_MODEL
+        self.profile = config.AWS_PROFILE
         logger.debug(f"LLM Region: {self.region}")
         logger.debug(f"LLM Model ID: {self.model_id}")
 
@@ -25,5 +26,7 @@ class BedrockHandler:
             raise
 
     def set_runtime(self):
-        bedrock = boto3.client(service_name="bedrock-runtime", region_name=self.region)
+        bedrock = boto3.Session(profile_name=self.profile).client(
+            service_name="bedrock-runtime", region_name=self.region
+        )
         return bedrock
