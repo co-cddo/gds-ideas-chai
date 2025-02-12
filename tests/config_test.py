@@ -18,24 +18,24 @@ def mock_env():
     os.environ.update(original_environ)
 
 
-def test_config_successful_initialization(mock_env):
-    """Test successful initialization with all environment variables set"""
+def test_config_successful_initialisation(mock_env):
+    """Test successful initialisation with all environment variables set"""
     os.environ.update(
         {
             "AWS_PROFILE": "test-profile",
             "LLM_REGION": "us-west-2",
-            "LLM_MODEL": "gpt-3",
+            "LLM_MODEL": "anthropic.claude-3-5-sonnet-20240620-v1:0",
         }
     )
 
     config = Config()
     assert config.AWS_PROFILE == "test-profile"
     assert config.LLM_REGION == "us-west-2"
-    assert config.LLM_MODEL == "gpt-3"
+    assert config.LLM_MODEL == "anthropic.claude-3-5-sonnet-20240620-v1:0"
 
 
 def test_config_missing_single_field(mock_env):
-    """Test initialization fails when one environment variable is missing"""
+    """Test initialisation fails when one environment variable is missing"""
     os.environ.update(
         {
             "AWS_PROFILE": "test-profile",
@@ -49,7 +49,7 @@ def test_config_missing_single_field(mock_env):
 
 
 def test_config_missing_multiple_fields(mock_env):
-    """Test initialization fails when multiple environment variables are missing"""
+    """Test initialisation fails when multiple environment variables are missing"""
     os.environ.update(
         {
             "AWS_PROFILE": "test-profile",
@@ -62,7 +62,7 @@ def test_config_missing_multiple_fields(mock_env):
 
 
 def test_config_missing_all_fields(mock_env):
-    """Test initialization fails when all environment variables are missing"""
+    """Test initialisation fails when all environment variables are missing"""
     with pytest.raises(ValueError) as exc_info:
         Config()
     assert any(
@@ -72,20 +72,25 @@ def test_config_missing_all_fields(mock_env):
 
 
 def test_config_direct_assignment(mock_env):
-    """Test successful initialization with direct assignment"""
+    """Test successful initialisation with direct assignment"""
     config = Config(
-        AWS_PROFILE="direct-profile", LLM_REGION="eu-west-1", LLM_MODEL="test-model"
+        AWS_PROFILE="direct-profile",
+        LLM_REGION="eu-west-1",
+        LLM_MODEL="anthropic.claude-3-5-sonnet-20240620-v1:0",
     )
     assert config.AWS_PROFILE == "direct-profile"
     assert config.LLM_REGION == "eu-west-1"
-    assert config.LLM_MODEL == "test-model"
+    assert config.LLM_MODEL == "anthropic.claude-3-5-sonnet-20240620-v1:0"
 
 
 @pytest.mark.parametrize(
     "env_vars,expected_missing",
     [
         (
-            {"AWS_PROFILE": "test", "LLM_MODEL": "test"},
+            {
+                "AWS_PROFILE": "test",
+                "LLM_MODEL": "anthropic.claude-3-5-sonnet-20240620-v1:0",
+            },
             ["LLM_REGION"],
         ),
         (
@@ -94,7 +99,7 @@ def test_config_direct_assignment(mock_env):
         ),
     ],
 )
-def test_config_parametrized(mock_env, env_vars, expected_missing):
+def test_config_parametrised(mock_env, env_vars, expected_missing):
     """Test different combinations of missing fields"""
     os.environ.update(env_vars)
 
