@@ -1,22 +1,21 @@
 import pytest
 from unittest.mock import Mock, patch
-import boto3
-import botocore
-from langchain_aws import ChatBedrock
+from botocore.exceptions import ClientError
 import os
 import sys
-from pathlib import Path
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from chAI.bedrock import BedrockHandler
+from chAI.constants import AWSRegion, LLMModel
+from chAI.config import Config, ConfigurationError
+from chAI.bedrock import BedrockHandler, BedrockHandlerError
 
 
 @pytest.fixture
 def mock_config():
-    """Create a mock config object"""
-    config = Mock()
-    config.LLM_REGION = "us-west-2"
-    config.LLM_MODEL = "anthropic.claude-v2"
+    """Create a mock configuration"""
+    config = Mock(spec=Config)
+    config.LLM_REGION = AWSRegion.US_EAST_1
+    config.LLM_MODEL = LLMModel.CLAUDE_SONNET_3_5
     config.AWS_PROFILE = "test-profile"
     return config
 
@@ -27,119 +26,178 @@ def bedrock_handler(mock_config):
     return BedrockHandler(mock_config)
 
 
-def test_initialisation(mock_config):
-    """Test successful initialisation of BedrockHandler"""
+def test_initialization_successful(mock_config):
+    """Test successful initialization of BedrockHandler"""
     handler = BedrockHandler(mock_config)
-    assert handler.region == "us-west-2"
-    assert handler.model_id == "anthropic.claude-v2"
+
+    assert handler.region == AWSRegion.US_EAST_1
+    assert handler.model_id == LLMModel.CLAUDE_SONNET_3_5
     assert handler.profile == "test-profile"
-
-
-def test_get_llm_success(bedrock_handler):
-    """Test successful creation of ChatBedrock instance"""
-    with patch("chAI.bedrock.ChatBedrock") as mock_chat_bedrock:
-        # Call the method
-        bedrock_handler.get_llm()
-
-        # Verify ChatBedrock was called with correct parameters
-        mock_chat_bedrock.assert_called_once_with(
-            model_id=bedrock_handler.model_id, region_name=bedrock_handler.region
-        )
-
-
-def test_get_llm_failure(bedrock_handler):
-    """Test handling of ChatBedrock creation failure"""
-    with patch("chAI.bedrock.ChatBedrock") as mock_chat_bedrock:
-        # Configure the mock to raise an exception
-        mock_chat_bedrock.side_effect = Exception("Connection error")
-
-        # Verify that the exception is raised
-        with pytest.raises(Exception) as exc_info:
-            bedrock_handler.get_llm()
-
-        assert "Connection error" in str(exc_info.value)
-
-
-def test_set_runtime(bedrock_handler):
-    """Test successful creation of bedrock-runtime client"""
-    mock_client = Mock()
-    mock_session = Mock()
-    mock_session.client.return_value = mock_client
-
-    with patch("boto3.Session") as mock_session_class:
-        mock_session_class.return_value = mock_session
-
-        result = bedrock_handler.set_runtime()
-
-        # Verify the session was created with correct parameters
-        mock_session_class.assert_called_once_with(profile_name=bedrock_handler.profile)
-
-        # Verify the client was created with correct parameters
-        mock_session.client.assert_called_once_with(
-            service_name="bedrock-runtime", region_name=bedrock_handler.region
-        )
-
-
-def test_set_runtime_with_invalid_profile(bedrock_handler):
-    """Test handling of invalid AWS profile"""
-    with patch("boto3.Session") as mock_session_class:
-        # Simulate boto3 error for invalid profile
-        mock_session_class.side_effect = botocore.exceptions.ProfileNotFound(
-            profile="invalid-profile"
-        )
-
-        with pytest.raises(botocore.exceptions.ProfileNotFound):
-            bedrock_handler.set_runtime()
+    assert handler._runtime is None
+    assert handler._llm is None
 
 
 @pytest.mark.parametrize(
-    "config_params",
+    "invalid_config",
     [
-        {"LLM_REGION": None, "LLM_MODEL": "model", "AWS_PROFILE": "profile"},
-        {"LLM_REGION": "", "LLM_MODEL": "model", "AWS_PROFILE": "profile"},
+        # Invalid model type
+        {
+            "LLM_MODEL": "invalid-model",
+            "LLM_REGION": AWSRegion.US_EAST_1,
+            "AWS_PROFILE": "test",
+        },
+        # Invalid region type
+        {
+            "LLM_MODEL": LLMModel.CLAUDE_SONNET_3_5,
+            "LLM_REGION": "invalid-region",
+            "AWS_PROFILE": "test",
+        },
+        # Invalid profile type
+        {
+            "LLM_MODEL": LLMModel.CLAUDE_SONNET_3_5,
+            "LLM_REGION": AWSRegion.US_EAST_1,
+            "AWS_PROFILE": 123,
+        },
     ],
 )
-def test_initialisation_with_invalid_params(config_params):
-    """Test initialisation with invalid parameters"""
-    mock_config = Mock()
-    for key, value in config_params.items():
+def test_initialization_with_invalid_config(invalid_config):
+    """Test initialization with invalid configuration"""
+    mock_config = Mock(spec=Config)
+    for key, value in invalid_config.items():
         setattr(mock_config, key, value)
 
-    # Just test that initialsation works
-    handler = BedrockHandler(mock_config)
-    assert handler is not None
+    with pytest.raises(ConfigurationError):
+        BedrockHandler(mock_config)
 
 
-def test_get_llm_with_invalid_region(bedrock_handler):
-    """Test get_llm with invalid region"""
-    with patch("chAI.bedrock.ChatBedrock") as mock_chat_bedrock:
-        mock_chat_bedrock.side_effect = botocore.exceptions.ClientError(
-            error_response={"Error": {"Code": "InvalidRegion"}},
-            operation_name="CreateModel",
-        )
-
-        with pytest.raises(botocore.exceptions.ClientError):
-            bedrock_handler.get_llm()
-
-
-def test_integration_get_llm_and_set_runtime(bedrock_handler):
-    """Test integration between get_llm and set_runtime"""
+def test_runtime_client_creation_successful(bedrock_handler):
+    """Test successful creation of runtime client"""
     mock_client = Mock()
     mock_session = Mock()
     mock_session.client.return_value = mock_client
 
-    with patch("boto3.Session") as mock_session_class, patch(
-        "chAI.bedrock.ChatBedrock"
-    ) as mock_chat_bedrock:
-
+    with patch("boto3.Session") as mock_session_class:
         mock_session_class.return_value = mock_session
 
-        # Get both LLM and runtime client
-        bedrock_handler.get_llm()
-        runtime = bedrock_handler.set_runtime()
+        client = bedrock_handler.runtime_client
 
-        # Verify the calls were made correctly
-        mock_chat_bedrock.assert_called_once_with(
-            model_id=bedrock_handler.model_id, region_name=bedrock_handler.region
+        assert client == mock_client
+        mock_session_class.assert_called_once_with(profile_name=bedrock_handler.profile)
+        mock_session.client.assert_called_once_with(
+            service_name="bedrock-runtime", region_name=bedrock_handler.region.value
         )
+
+
+def test_runtime_client_creation_failure(bedrock_handler):
+    """Test handling of runtime client creation failure"""
+    with patch("chAI.bedrock.boto3.Session") as mock_session:
+        mock_session.side_effect = ClientError(
+            error_response={"Error": {"Code": "InvalidProfile"}},
+            operation_name="CreateClient",
+        )
+
+        with pytest.raises(BedrockHandlerError) as exc_info:
+            _ = bedrock_handler.runtime_client
+
+        assert "Bedrock client creation failed" in str(exc_info.value)
+
+
+def test_runtime_client_caching(bedrock_handler):
+    """Test that runtime client is cached"""
+    mock_client = Mock()
+    mock_session = Mock()
+    mock_session.client.return_value = mock_client
+
+    with patch("boto3.Session") as mock_session_class:
+        mock_session_class.return_value = mock_session
+
+        # First access creates the client
+        client1 = bedrock_handler.runtime_client
+        # Second access should return cached client
+        client2 = bedrock_handler.runtime_client
+
+        assert client1 == client2
+        mock_session_class.assert_called_once()
+
+
+def test_llm_creation_successful(bedrock_handler):
+    """Test successful creation of LLM instance"""
+    mock_llm = Mock()
+
+    with patch("chAI.bedrock.ChatBedrock", return_value=mock_llm) as mock_chat_bedrock:
+        llm = bedrock_handler.get_llm()
+
+        assert llm == mock_llm
+        mock_chat_bedrock.assert_called_once_with(
+            model_id=bedrock_handler.model_id.value,
+            region_name=bedrock_handler.region.value,
+        )
+
+
+def test_runtime_client_creation_failure(bedrock_handler):
+    """Test handling of runtime client creation failure"""
+    with patch("chAI.bedrock.boto3.Session") as mock_session:
+        mock_session.side_effect = ClientError(
+            error_response={"Error": {"Code": "InvalidProfile"}},
+            operation_name="CreateClient",
+        )
+
+        with pytest.raises(BedrockHandlerError) as exc_info:
+            _ = bedrock_handler.runtime_client
+
+        assert "Bedrock client creation failed" in str(exc_info.value)
+
+
+def test_llm_caching(bedrock_handler):
+    """Test that LLM instance is cached"""
+    mock_llm = Mock()
+
+    with patch("chAI.bedrock.ChatBedrock", return_value=mock_llm) as mock_chat_bedrock:
+        # First access creates the LLM
+        llm1 = bedrock_handler.get_llm()
+        # Second access should create new instance (no caching in get_llm)
+        llm2 = bedrock_handler.get_llm()
+
+        assert mock_chat_bedrock.call_count == 2
+        assert llm1 == llm2
+
+
+# Try different errors when setting runtime
+@pytest.mark.parametrize(
+    "error,expected_message",
+    [
+        (
+            ClientError({"Error": {"Code": "InvalidProfile"}}, "CreateClient"),
+            "Bedrock client creation failed",
+        ),
+        (Exception("Network error"), "Bedrock client creation failed"),
+    ],
+)
+def test_set_runtime_errors(bedrock_handler, error, expected_message):
+    """Test different error scenarios in set_runtime"""
+    with patch("chAI.bedrock.boto3.Session") as mock_session:
+        mock_session.side_effect = error
+
+        with pytest.raises(BedrockHandlerError) as exc_info:
+            bedrock_handler.set_runtime()
+
+        assert expected_message in str(exc_info.value)
+
+
+def test_integration_llm_and_runtime(bedrock_handler):
+    """Test integration between LLM and runtime client creation"""
+    mock_client = Mock()
+    mock_session = Mock()
+    mock_session.client.return_value = mock_client
+    mock_llm = Mock()
+
+    with patch("chAI.bedrock.boto3.Session") as mock_session_class, patch(
+        "chAI.bedrock.ChatBedrock", return_value=mock_llm
+    ):
+
+        mock_session_class.return_value = mock_session
+        runtime = bedrock_handler.set_runtime()
+        llm = bedrock_handler.get_llm()
+
         assert runtime == mock_client
+        assert llm == mock_llm

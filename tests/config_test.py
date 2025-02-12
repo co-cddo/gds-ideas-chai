@@ -1,11 +1,17 @@
 import pytest
-import os
 from unittest.mock import patch
+import os
 import sys
-from pathlib import Path
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from chAI.config import Config
+from chAI.config import (
+    Config,
+    ConfigurationError,
+    validate_aws_profile,
+    validate_llm_region,
+    validate_llm_model,
+)
+from chAI.constants import AWSRegion, LLMModel
 
 
 @pytest.fixture(autouse=True)
@@ -18,92 +24,143 @@ def mock_env():
     os.environ.update(original_environ)
 
 
-def test_config_successful_initialisation(mock_env):
-    """Test successful initialisation with all environment variables set"""
+# Test validation functions
+def test_validate_aws_profile():
+    """Test AWS profile validation"""
+    assert validate_aws_profile("valid-profile") == "valid-profile"
+
+    with pytest.raises(ConfigurationError, match="AWS_PROFILE cannot be None or empty"):
+        validate_aws_profile(None)
+
+    with pytest.raises(ConfigurationError, match="AWS_PROFILE cannot be None or empty"):
+        validate_aws_profile("")
+
+
+def test_validate_llm_region():
+    """Test LLM region validation"""
+    # Test valid regions
+    assert validate_llm_region("us-east-1") == AWSRegion.US_EAST_1
+    assert validate_llm_region("us-west-2") == AWSRegion.US_WEST_2
+
+    # Test invalid regions
+    with pytest.raises(ConfigurationError, match="LLM_REGION cannot be None or empty"):
+        validate_llm_region(None)
+
+    with pytest.raises(ConfigurationError, match="Invalid region"):
+        validate_llm_region("invalid-region")
+
+
+def test_validate_llm_model():
+    """Test LLM model validation"""
+    # Test valid models
+    assert validate_llm_model("anthropic.claude-v2:1") == LLMModel.CLAUDE_V2_1
+
+    # Test invalid models
+    with pytest.raises(ConfigurationError, match="LLM_MODEL cannot be None or empty"):
+        validate_llm_model(None)
+
+    with pytest.raises(ConfigurationError, match="Invalid model"):
+        validate_llm_model("invalid-model")
+
+
+# Test Config class
+def test_config_successful_initialization(mock_env):
+    """Test successful initialization with all environment variables set"""
     os.environ.update(
         {
             "AWS_PROFILE": "test-profile",
             "LLM_REGION": "us-west-2",
-            "LLM_MODEL": "anthropic.claude-3-5-sonnet-20240620-v1:0",
+            "LLM_MODEL": "anthropic.claude-v2:1",
         }
     )
 
     config = Config()
     assert config.AWS_PROFILE == "test-profile"
-    assert config.LLM_REGION == "us-west-2"
-    assert config.LLM_MODEL == "anthropic.claude-3-5-sonnet-20240620-v1:0"
+    assert config.LLM_REGION == AWSRegion.US_WEST_2
+    assert config.LLM_MODEL == LLMModel.CLAUDE_V2_1
 
 
-def test_config_missing_single_field(mock_env):
-    """Test initialisation fails when one environment variable is missing"""
-    os.environ.update(
-        {
-            "AWS_PROFILE": "test-profile",
-            "LLM_REGION": "us-west-2",
-        }
-    )
-
-    with pytest.raises(ValueError) as exc_info:
-        Config()
-    assert "LLM_MODEL" in str(exc_info.value)
-
-
-def test_config_missing_multiple_fields(mock_env):
-    """Test initialisation fails when multiple environment variables are missing"""
-    os.environ.update(
-        {
-            "AWS_PROFILE": "test-profile",
-        }
-    )
-
-    with pytest.raises(ValueError) as exc_info:
-        Config()
-    assert any(field in str(exc_info.value) for field in ["LLM_REGION", "LLM_MODEL"])
-
-
-def test_config_missing_all_fields(mock_env):
-    """Test initialisation fails when all environment variables are missing"""
-    with pytest.raises(ValueError) as exc_info:
-        Config()
-    assert any(
-        field in str(exc_info.value)
-        for field in ["AWS_PROFILE", "LLM_REGION", "LLM_MODEL"]
-    )
-
-
-def test_config_direct_assignment(mock_env):
-    """Test successful initialisation with direct assignment"""
+def test_config_direct_assignment():
+    """Test successful initialization with direct assignment"""
     config = Config(
         AWS_PROFILE="direct-profile",
-        LLM_REGION="eu-west-1",
-        LLM_MODEL="anthropic.claude-3-5-sonnet-20240620-v1:0",
+        LLM_REGION=AWSRegion.EU_WEST_1,
+        LLM_MODEL=LLMModel.CLAUDE_V2_1,
     )
     assert config.AWS_PROFILE == "direct-profile"
-    assert config.LLM_REGION == "eu-west-1"
-    assert config.LLM_MODEL == "anthropic.claude-3-5-sonnet-20240620-v1:0"
+    assert config.LLM_REGION == AWSRegion.EU_WEST_1
+    assert config.LLM_MODEL == LLMModel.CLAUDE_V2_1
 
 
 @pytest.mark.parametrize(
-    "env_vars,expected_missing",
+    "env_vars,expected_error",
     [
+        (
+            {"AWS_PROFILE": "test", "LLM_MODEL": "anthropic.claude-v2:1"},
+            "LLM_REGION cannot be None or empty",
+        ),
+        ({"AWS_PROFILE": "test"}, "LLM_REGION cannot be None or empty"),
         (
             {
                 "AWS_PROFILE": "test",
-                "LLM_MODEL": "anthropic.claude-3-5-sonnet-20240620-v1:0",
+                "LLM_REGION": "invalid-region",
+                "LLM_MODEL": "anthropic.claude-v2:1",
             },
-            ["LLM_REGION"],
+            "Invalid region",
         ),
         (
-            {"AWS_PROFILE": "test"},
-            ["LLM_REGION", "LLM_MODEL"],
+            {
+                "AWS_PROFILE": "test",
+                "LLM_REGION": "us-west-2",
+                "LLM_MODEL": "invalid-model",
+            },
+            "Invalid model",
         ),
     ],
 )
-def test_config_parametrised(mock_env, env_vars, expected_missing):
-    """Test different combinations of missing fields"""
+def test_config_validation_errors(mock_env, env_vars, expected_error):
+    """Test different validation error scenarios"""
     os.environ.update(env_vars)
 
-    with pytest.raises(ValueError) as exc_info:
+    with pytest.raises(ConfigurationError, match=expected_error):
         Config()
-    for field in expected_missing:
-        assert field in str(exc_info.value)
+
+
+def test_invalid_type_assignment():
+    """Test assignment of invalid types"""
+    with pytest.raises(ConfigurationError):
+        Config(
+            AWS_PROFILE=123,  # Should be string
+            LLM_REGION=AWSRegion.US_WEST_2,
+            LLM_MODEL=LLMModel.CLAUDE_V2_1,
+        )
+
+
+@pytest.mark.parametrize(
+    "invalid_region",
+    [
+        "invalid-region",
+        "",
+        None,
+        123,
+    ],
+)
+def test_invalid_region_values(invalid_region):
+    """Test various invalid region values"""
+    with pytest.raises(ConfigurationError):
+        validate_llm_region(invalid_region)
+
+
+@pytest.mark.parametrize(
+    "invalid_model",
+    [
+        "invalid-model",
+        "",
+        None,
+        123,
+    ],
+)
+def test_invalid_model_values(invalid_model):
+    """Test various invalid model values"""
+    with pytest.raises(ConfigurationError):
+        validate_llm_model(invalid_model)

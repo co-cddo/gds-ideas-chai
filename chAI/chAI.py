@@ -35,7 +35,17 @@ import base64
 class chAI:
     def __init__(self, region_name: str = "us-east-1"):
         """
-        Initialise chAI with required configurations and tools.
+        Initializes the chAI class with required configurations and tools.
+
+        Args:
+            region_name (str, optional): AWS region name. Defaults to "us-east-1".
+
+        Notes:
+            - Sets up configuration using Config class
+            - Initializes Bedrock handler and runtime
+            - Loads LLM model and prompt
+            - Sets up visualization tools and templates
+            - Creates agent executor
         """
         logger.info("chAI Start")
         self.config = Config()
@@ -56,7 +66,20 @@ class chAI:
         self.visualisations = None
 
     def set_agent_executor(self, verbose=False, handle_parse=True):
-        logger.info("Setting up chAI executor")
+        """
+        Sets up the LangChain agent executor with specified tools and configurations.
+
+        Args:
+            verbose (bool, optional): Enable verbose output. Defaults to False.
+            handle_parse (bool, optional): Enable parsing error handling. Defaults to True.
+
+        Returns:
+            AgentExecutor: Configured agent executor instance.
+
+        Raises:
+            Exception: If there's an error setting up the agent executor.
+        """
+        logger.info("Setting up chAI agent")
         try:
             agent = create_json_chat_agent(self.llm, self.tools, self.prompt)
             logger.debug("Structured chat agent created")
@@ -67,21 +90,28 @@ class chAI:
                 verbose=verbose,
                 handle_parsing_errors=handle_parse,
             )
-            logger.info("Agent executor successfully set up")
+            logger.info("chAI agent successfully set up")
             return executor
         except Exception as e:
-            logger.error(f"Error setting up agent executor: {str(e)}")
+            logger.error(f"Error setting up chAI agent: {str(e)}")
             raise
 
     def parse_dataframe(self, df: pd.DataFrame) -> dict:
         """
-        Extract useful information from a DataFrame and return it as a JSON-like dictionary suitable for an LLM to review.
+        Extracts useful information from a DataFrame and returns it as a JSON-like dictionary.
 
-        Parameters:
-        df: DataFrame to analyse.
+        Args:
+            df (pd.DataFrame): DataFrame to analyze.
 
         Returns:
-        dict: A structured dictionary containing DataFrame details.
+            dict: Structured dictionary containing:
+                - Column names and types
+                - DataFrame shape
+                - Summary statistics
+                - Sample data (first 10 rows)
+
+        Raises:
+            Exception: If there's an error parsing the DataFrame.
         """
         logger.info("Parsing DataFrame into structured JSON dictionary")
         try:
@@ -108,16 +138,16 @@ class chAI:
 
     def encode_image(self, image_path) -> str:
         """
-        Encode one or more images into Base64 ready for Claude's multi-modal API call. Avoids agent since agent will truncate base64 image payload.
+        Encodes an image file to Base64 format for Claude's multi-modal API.
 
-        Parameters:
-            image_paths str: Path to the chart image
+        Args:
+            image_path (str): Path to the image file.
 
         Returns:
-            image_contents str: base64 encoded image string data
+            str: Base64 encoded image string.
 
         Raises:
-            Exception: If there's an error processing the request or calling Bedrock
+            Exception: If there's an error reading or encoding the image.
         """
         logger.info("Encoding image to base64")
         try:
@@ -133,9 +163,47 @@ class chAI:
 
     def analyse_image(self, base64_data, custom_prompt=None):
         """
-        Necessary because trying to pass it into an agent tool fails as agent will truncate the base64 image
-        data.
+        Analyses an image using AWS Bedrock's Claude model and returns a structured analysis.
 
+            This method is designed to handle full base64 image data directly, bypassing the typical
+            agent tool limitations that might truncate the image data. It sends the image to Claude
+            along with a structured prompt for analysis.
+
+            Args:
+                base64_data (str): The base64-encoded image data to be analyzed.
+                custom_prompt (str, optional): Additional specific requirements or questions to be
+                    addressed in the analysis. Defaults to None.
+
+            Returns:
+                str: A structured analysis of the image including:
+                    - General description
+                    - Chart type identification
+                    - Axes analysis
+                    - Key insights and patterns
+                    - Plotly recreation code
+                    - Required data structure description
+                    If an error occurs, returns an error message string.
+
+            Raises:
+                No exceptions are raised directly; all exceptions are caught and returned as error messages.
+
+            Example:
+                >>> analyser = YourClass(config)
+                >>> base64_image = "base64_encoded_image_data"
+                >>> custom_requirements = "Focus on trend analysis and seasonal patterns"
+                >>> result = analyser.analyse_image(base64_image, custom_requirements)
+                >>> print(result)
+                # Description
+                This image shows a time series plot...
+                # Chart Analysis
+                ## Type
+                Line plot...
+
+            Notes:
+                - The method uses AWS Bedrock's Claude model specified in the configuration
+                - The analysis follows a structured format with markdown-style sections
+                - Maximum token limit is set to 2000 for the response
+                - Requires valid AWS credentials and permissions to access Bedrock
         """
         try:
             if not base64_data:
@@ -215,16 +283,27 @@ class chAI:
         **kwargs,
     ):
         """
-        Handle user input by deciding how to process it, based on the type of data provided.
+        Processes user requests based on input type and generates appropriate visualisations.
 
-        Parameters:
-        data: Input data for the agent. Could be a DataFrame or other types.
-        prompt: String prompt to guide the agent.
-        image_paths: List of image paths to convert and pass for analysis
-        output_path: String to set the output path for any plotly-based visualisations in html files. If none, will store in home directory.
+        Args:
+            data: Input data (e.g., DataFrame) for analysis.
+            prompt (str, optional): User instructions for visualization.
+            image_path (str, optional): Path to image for analysis.
+            chart_type (str, optional): Specific chart type request.
+            output_path (str, optional): Output directory for saved visualizations.
+            **kwargs: Additional keyword arguments.
 
         Returns:
-        Response generated by the agent executor.
+            dict: Agent response containing:
+                - Analysis results
+                - Generated visualisations
+                - Output file paths
+
+        Notes:
+            - Handles different input types (DataFrame, image, chart type)
+            - Limits DataFrame processing to 100 rows
+            - Uses appropriate templates based on chart type specified
+            - Saves visualisations to specified output path
         """
 
         base_prompt = f"""
