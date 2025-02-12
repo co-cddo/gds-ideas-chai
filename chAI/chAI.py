@@ -5,16 +5,16 @@ import os
 import time
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any, Dict, List, Literal, Optional
+from typing import Union, Optional, Any, Dict, List
 from uuid import uuid4
 import boto3
 from dotenv import load_dotenv
+from pathlib import Path
 
 # Import agent dependencies
 from langchain import hub
 from langchain.agents import (
     AgentExecutor,
-    tool,
     create_json_chat_agent,
 )
 
@@ -25,6 +25,16 @@ from tools.visualisation_formatter import create_formatting_tool
 from tools.image_analysis_formatter import create_analysis_formatter_tool
 from tools.save_plotly import create_save_plotly_tool
 from tools.default_charts import PlotlyTemplates
+from chAI.constants import (
+    LLMModel,
+    AWSRegion,
+    APIVersion,
+    MaxTokens,
+    DataFrameLimits,
+    ChartType,
+)
+from chAI.types import DataFrameInfo
+from chAI.requests import DataFrameHandler, DataFrameJSONEncoder
 
 logger = logging.getLogger()
 
@@ -32,8 +42,14 @@ import pandas as pd
 import base64
 
 
+class ChAIError(Exception):
+    """Base exception for chAI errors"""
+
+    pass
+
+
 class chAI:
-    def __init__(self, region_name: str = "us-east-1"):
+    def __init__(self, region_name: AWSRegion = AWSRegion.US_EAST_1):
         """
         Initializes the chAI class with required configurations and tools.
 
@@ -53,6 +69,9 @@ class chAI:
         self.bedrock_runtime = self.bedrock.set_runtime()
         self.llm = self.bedrock.get_llm()
         self.prompt = hub.pull("hwchase17/react-chat-json")
+
+        # Initialise handlers
+        self.dataframe_handler = DataFrameHandler()
 
         self.tools = [
             create_formatting_tool(),
@@ -82,8 +101,6 @@ class chAI:
         logger.info("Setting up chAI agent")
         try:
             agent = create_json_chat_agent(self.llm, self.tools, self.prompt)
-            logger.debug("Structured chat agent created")
-
             executor = AgentExecutor(
                 agent=agent,
                 tools=self.tools,
@@ -96,47 +113,7 @@ class chAI:
             logger.error(f"Error setting up chAI agent: {str(e)}")
             raise
 
-    def parse_dataframe(self, df: pd.DataFrame) -> dict:
-        """
-        Extracts useful information from a DataFrame and returns it as a JSON-like dictionary.
-
-        Args:
-            df (pd.DataFrame): DataFrame to analyze.
-
-        Returns:
-            dict: Structured dictionary containing:
-                - Column names and types
-                - DataFrame shape
-                - Summary statistics
-                - Sample data (first 10 rows)
-
-        Raises:
-            Exception: If there's an error parsing the DataFrame.
-        """
-        logger.info("Parsing DataFrame into structured JSON dictionary")
-        try:
-            try:
-                summary = df.describe(include="all").to_dict()
-            except ValueError as e:
-                logger.warning(f"Could not generate full summary statistics: {e}")
-                summary = {}
-
-            data_info = {
-                "columns": [
-                    {"name": col, "dtype": str(dtype)}
-                    for col, dtype in df.dtypes.items()
-                ],
-                "shape": {"rows": df.shape[0], "columns": df.shape[1]},
-                "summary": summary,
-                "sample_data": df.head(10).to_dict(orient="records"),
-            }
-            logger.debug(f"DataFrame parsed: {data_info}")
-            return data_info
-        except Exception as e:
-            logger.error(f"Error parsing DataFrame: {str(e)}")
-            raise
-
-    def encode_image(self, image_path) -> str:
+    def encode_image(self, image_path: Union[str, Path]) -> str:
         """
         Encodes an image file to Base64 format for Claude's multi-modal API.
 
@@ -152,16 +129,17 @@ class chAI:
         logger.info("Encoding image to base64")
         try:
             # Create image content string
-            with open(image_path, "rb") as image_file:
-                encoded_image = base64.b64encode(image_file.read()).decode("utf-8")
-
-            return encoded_image
+            path = Path(image_path)
+            with path.open("rb") as image_file:
+                return base64.b64encode(image_file.read()).decode("utf-8")
 
         except Exception as e:
             logger.error(f"Error encoding image: {str(e)}")
-            raise
+            raise ChAIError(f"Failed to encode image: {e}")
 
-    def analyse_image(self, base64_data, custom_prompt=None):
+    def analyse_image(
+        self, base64_data: str, custom_prompt: Optional[str] = None
+    ) -> str:
         """
         Analyses an image using AWS Bedrock's Claude model and returns a structured analysis.
 
@@ -237,8 +215,8 @@ class chAI:
                 [Describe the data structure needed for the Plotly code]"""
 
             body = {
-                "anthropic_version": "bedrock-2023-05-31",
-                "max_tokens": 2000,
+                "anthropic_version": APIVersion.BEDROCK.value,
+                "max_tokens": MaxTokens.DEFAULT,
                 "messages": [
                     {
                         "role": "user",
@@ -270,34 +248,37 @@ class chAI:
             return response_body.get("content", [])[0].get("text", "")
 
         except Exception as e:
-            logger.error(f"Full error in analyse_image: {str(e)}")
-            return f"Error analysing image: {str(e)}"
+            logger.error(f"Error in analyse_image: {str(e)}")
+            raise ChAIError(f"Failed to analyse image: {e}")
 
     def handle_request(
         self,
-        data=None,
-        prompt=None,
-        image_path=None,
-        chart_type=None,
-        output_path=None,
-        **kwargs,
-    ):
+        data: Optional[pd.DataFrame] = None,
+        prompt: Optional[str] = None,
+        image_path: Optional[Union[str, Path]] = None,
+        chart_type: Optional[str] = None,
+        output_path: Optional[Union[str, Path]] = None,
+        **kwargs: Any,
+    ) -> Dict[str, Any]:
         """
         Processes user requests based on input type and generates appropriate visualisations.
 
         Args:
-            data: Input data (e.g., DataFrame) for analysis.
-            prompt (str, optional): User instructions for visualization.
-            image_path (str, optional): Path to image for analysis.
-            chart_type (str, optional): Specific chart type request.
-            output_path (str, optional): Output directory for saved visualizations.
-            **kwargs: Additional keyword arguments.
+            data (Optional[pd.DataFrame]): Input data for analysis.
+            prompt (Optional[str]): User instructions for visualization.
+            image_path (Optional[Union[str, Path]]): Path to image for analysis.
+            chart_type (Optional[ChartType]): Specific chart type from ChartType enum.
+            output_path (Optional[Union[str, Path]]): Output directory for saved visualizations.
+            **kwargs (Any): Additional keyword arguments for the LLM.
 
         Returns:
-            dict: Agent response containing:
+            Dict[str, Any]: Agent response containing:
                 - Analysis results
                 - Generated visualisations
                 - Output file paths
+
+        Raises:
+        ChAIError: If there's an error processing the request.
 
         Notes:
             - Handles different input types (DataFrame, image, chart type)
@@ -313,114 +294,128 @@ class chAI:
 
         if isinstance(data, pd.DataFrame):
             logger.info("Detected DataFrame input. Preparing to analyse...")
+            final_prompt = self.dataframe_handler.dataframe_request(data, base_prompt)
 
-            # Limit the DataFrame to the top 100 rows to reduce LLM costs
-            max_rows = 100
-            if len(data) > max_rows:
-                logger.info(
-                    f"DataFrame has more than {max_rows} rows. Trimming for processing."
-                )
-                data = data.head(max_rows)
-
-            # Convert DataFrame to JSON string ready for LLM review
-            dataframe_json = data.to_json(orient="split")
-
-            # Construct the combined prompt - TODO: maybe instead of creating a separate prompt, we add the bits
-            # to the prompt depending on what is being analysed as we do with citations.
-
-            dataframe_prompt = f"""
-                        DataFrame Information (Top {len(data)} Rows):
-                        The following is a JSON representation of the DataFrame. Use this to suggest suitable visualisations:
-                        {dataframe_json}
-
-                        Instructions:
-                        1. Analyse the DataFrame to understand its structure and content
-                        2. Suggest meaningful visualisations based on the data and user's instructions
-                        3. For each visualisation, include:
-                        - Clear purpose
-                        - Chart type
-                        - Variables used
-                        - Expected insights
-                        4. Use the format_visualisation_output tool to structure your response
-                        5. Make sure to provide concrete, specific suggestions based on the actual data
-
-                        Remember to use the formatting tool for your final output.
-                        """
-
-            final_prompt = f"""
-                {base_prompt}
-
-                {dataframe_prompt}
-                """
-
-        if isinstance(image_path, str):
+        elif isinstance(image_path, str):
             logger.info("Detected image location input. Preparing to review...")
+            final_prompt = self._handle_image_request(image_path, output_path)
 
-            # Get encoded image data
-            image_base64 = self.encode_image(image_path)
-            image_response = self.analyse_image(image_base64)
+        elif chart_type:
+            logger.info(f"Processing chart type request: {chart_type.value}")
+            final_prompt = self._handle_chart_request(chart_type, prompt, output_path)
 
-            logger.info(f"Claude markdown response: {image_response}")
+        else:
+            raise ValueError("No valid input provided")
 
-            # Get the template examples
-            template_examples = PlotlyTemplates.get_template_prompt()
+        # Send to the agent executor
+        try:
+            logger.info("Sending prompt and data to agent executor...")
+            response = self.agent_executor.invoke({"input": final_prompt})
+            print(response)
+            return response
+        except Exception as e:
+            logger.error(f"Error in handle_request: {str(e)}")
+            raise ChAIError(f"Failed to process request: {e}")
 
-            final_prompt = f"""
-                    Use the image_analysis_formatter tool to standardise the output and create an interactive visualisation using appropriate default chart templates as reference.
-                    
-                    1. First, format the analysis using image_analysis_formatter with these parameters:
-                    - image_information: {image_response}
-                    
-                    2. Based on the chart type identified in the analysis, use the appropriate template from below:
-                    {template_examples}
-                    
-                    3. Use the matching template as a reference for structure and styling, particularly for:
-                    - Layout organization
-                    - Title and axis label formatting
-                    - Template style ('plotly_white')
-                    - Figure update_layout parameters
-                    - Text positioning and formatting
-                    
-                    4. Modify the template code with:
-                    - The actual data from the image
-                    - Similar color schemes where appropriate
-                    - Matching chart type specifications
-                    - Equivalent text positioning
-                    
-                    5. Use save_plotly_visualisation to create an HTML file in the output_path folder. 
-                    The requested output_path folder is {output_path}. 
-                    If this is empty or None, then use the default path in plotly_visualisation.
-                    
-                    6. Return both:
-                    - The formatted analysis from step 1
-                    - The path to the saved visualisation
-                    - The modified Plotly code used
-                    
-                    Remember to maintain the professional appearance of the default templates while incorporating the specific data and styling from the image.
-                    Choose the most appropriate template based on the chart type identified in your analysis.
-                """
+    def _handle_dataframe_request(self, data: pd.DataFrame, base_prompt: str) -> str:
+        """Handle DataFrame analysis request."""
+        if len(data) > DataFrameLimits.MAX_ROWS:
+            logger.info(
+                f"DataFrame has more than {DataFrameLimits.MAX_ROWS} rows. Trimming for processing."
+            )
+            data = data.head(DataFrameLimits.MAX_ROWS)
 
-        if chart_type:
-            templates = PlotlyTemplates.get_templates()
-            chart_type_mapping = {
-                "bar": "bar_chart",
-                "histogram": "histogram",
-                "scatter": "scatter_plot",
-                "line": "line_chart",
-            }
-            chart_type_lower = chart_type.lower()
-            if chart_type_lower not in chart_type_mapping:
-                logger.warning(
-                    f"Unsupported chart type: {chart_type}. Defaulting to bar chart."
-                )
-                template_key = "bar_chart"
-            else:
-                template_key = chart_type_mapping[chart_type_lower]
+        dataframe_json = data.to_json(orient="split")
 
-            template_code = templates[template_key]
+        dataframe_prompt = f"""
+            DataFrame Information (Top {len(data)} Rows):
+            The following is a JSON representation of the DataFrame. Use this to suggest suitable visualisations:
+            {dataframe_json}
 
-            final_prompt = f"""
-            Create a default {chart_type if chart_type else 'bar'} chart visualisation using this template as reference:
+            Instructions:
+            1. Analyse the DataFrame to understand its structure and content
+            2. Suggest meaningful visualisations based on the data and user's instructions
+            3. For each visualisation, include:
+            - Clear purpose
+            - Chart type
+            - Variables used
+            - Expected insights
+            4. Use the format_visualisation_output tool to structure your response
+            5. Make sure to provide concrete, specific suggestions based on the actual data
+
+            Remember to use the formatting tool for your final output.
+            """
+
+        return f"{base_prompt}\n\n{dataframe_prompt}"
+
+    def _handle_image_request(
+        self, image_path: Union[str, Path], output_path: Optional[Union[str, Path]]
+    ) -> str:
+        """Handle image analysis request."""
+        image_base64 = self.encode_image(image_path)
+        image_response = self.analyse_image(image_base64)
+        template_examples = PlotlyTemplates.get_template_prompt()
+
+        return f"""
+            Use the image_analysis_formatter tool to standardise the output and create an interactive visualisation using appropriate default chart templates as reference.
+            
+            1. First, format the analysis using image_analysis_formatter with these parameters:
+            - image_information: {image_response}
+            
+            2. Based on the chart type identified in the analysis, use the appropriate template from below:
+            {template_examples}
+            
+            3. Use the matching template as a reference for structure and styling, particularly for:
+            - Layout organization
+            - Title and axis label formatting
+            - Template style ('plotly_white')
+            - Figure update_layout parameters
+            - Text positioning and formatting
+            
+            4. Modify the template code with:
+            - The actual data from the image
+            - Similar color schemes where appropriate
+            - Matching chart type specifications
+            - Equivalent text positioning
+            
+            5. Use save_plotly_visualisation to create an HTML file in the output_path folder. 
+            The requested output_path folder is {output_path}. 
+            If this is empty or None, then use the default path in plotly_visualisation.
+            
+            6. Return both:
+            - The formatted analysis from step 1
+            - The path to the saved visualisation
+            - The modified Plotly code used
+            
+            Remember to maintain the professional appearance of the default templates while incorporating the specific data and styling from the image.
+            Choose the most appropriate template based on the chart type identified in your analysis.
+        """
+
+    def _handle_chart_request(
+        self,
+        chart_type: ChartType,
+        prompt: Optional[str],
+        output_path: Optional[Union[str, Path]],
+    ) -> str:
+        """Handle specific chart type request."""
+        templates = PlotlyTemplates.get_templates()
+        chart_type_mapping = {
+            ChartType.BAR: "bar_chart",
+            ChartType.HISTOGRAM: "histogram",
+            ChartType.SCATTER: "scatter_plot",
+            ChartType.LINE: "line_chart",
+        }
+
+        template_key = chart_type_mapping.get(chart_type, "bar_chart")
+        if template_key != chart_type_mapping.get(chart_type):
+            logger.warning(
+                f"Unsupported chart type: {chart_type}. Defaulting to bar chart."
+            )
+
+        template_code = templates[template_key]
+
+        return f"""
+            Create a default {chart_type.value} chart visualisation using this template as reference:
 
             # Template Code:
             {template_code}
@@ -433,17 +428,7 @@ class chAI:
             The requested output_path folder is {output_path}. 
             If this is empty or None, then use the default path in plotly_visualisation.
             
-            4. Return:
+            Return:
             - The modified Plotly code used
             - The path to the saved visualisation
-            """
-
-        # Send to the agent executor
-        try:
-            logger.info("Sending prompt and data to agent executor...")
-            response = self.agent_executor.invoke({"input": final_prompt})
-            print(response)
-            return response
-        except Exception as e:
-            logger.error(f"Error in agent executor: {str(e)}")
-            return f"Error processing visualisation suggestions: {str(e)}"
+        """
