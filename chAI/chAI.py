@@ -398,25 +398,28 @@ class chAI:
         print(template_code)
 
         return f"""
-            Create a default {chart_type} chart visualisation using this template as reference:
+            You are a data visualization expert using Plotly to create a {chart_type} chart.
 
-            # Template Code:
+            Here is your template code:
+            ```python
             {template_code}
-            
-            1. Use this template code as a starting point
-            2. Consider the following specific requirements in adapting the code to the user's needs:
+            ```
+
+            Requirements:
             {prompt if prompt else "No additional specific requirements stated"}
-            3. Maintain the professional styling while adjusting for your specific needs and those of the user.
-            4. Use the save_plotly_visualisatio tool to create an HTML file in the output_path folder.
-            {f'Use this exact output path: {str(output_path)}' if output_path else 'Use the default path in the save_plotly_visualisation tool'}
-            5. The save_plotly_visualisation tool will return a dictionary containing the path and code. Use this dictionary 
-            to build a JSON dictionary like the one below:
+
+            Instructions:
+            1. Modify the template code to meet the requirements
+            2. Use the save_plotly_visualisation tool to save your visualization
+            3. Return ONLY a JSON dictionary containing the tool's response
+
+            The JSON must be in this exact format:
+            ```json
             {{
-                "path": "The exact path returned by the save_plotly_visualisation tool",
-                "code": "The complete plotly code used to create the visualisation by the save_plotly_visualisation tool"
+                "path": "<path returned by tool>",
+                "code": "<complete code used>"
             }}
-            
-            DO NOT include any text before or after the JSON.
-            DO NOT add any explanations or descriptions.
-            ONLY return the JSON dictionary.
+            ```
+
+            Remember: Return only the JSON dictionary, with no additional text or explanations.
         """
