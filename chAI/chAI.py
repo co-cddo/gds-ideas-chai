@@ -313,7 +313,6 @@ class chAI:
         try:
             logger.info("Sending prompt and data to agent executor...")
             response = self.agent_executor.invoke({"input": final_prompt})
-            print(response)
             return response["output"]
         except Exception as e:
             logger.error(f"Error in handle_request: {str(e)}")
@@ -356,13 +355,13 @@ class chAI:
             - Professional appearance and readability
             
             5. Use save_plotly_visualisation to create an HTML file in the output_path folder.
-            {f'Use this exact output path: {str(output_path)}' if output_path else 'Use the default path in save_plotly_visualisation'}
+            {f'Use this exact output path: {str(output_path)}' if output_path else 'Use the default path in save_plotly_visualisation tool'}
             
             6. Return a JSON dictionary with exactly this structure:
             {{
                 "analysis": "## Insights\\n1. <insight1>\\n2. <insight2>\\n...",
-                "path": The exact path returned by save_plotly_visualisation,
-                "code": The complete plotly code used to create the visualisation
+                "path": The exact path returned by save_plotly_visualisation tool,
+                "code": The complete plotly code used to create the visualisation tool
             }}
             
             IMPORTANT: The analysis section in the JSON response should maintain the exact markdown formatting with the "## Insights" header and numbered list format.
@@ -387,11 +386,13 @@ class chAI:
             ChartType.LINE: "line_chart",
         }
 
-        template_key = chart_type_mapping.get(chart_type, "bar_chart")
-        if template_key != chart_type_mapping.get(chart_type):
+        if chart_type not in chart_type_mapping:
             logger.warning(
                 f"Unsupported chart type: {chart_type}. Defaulting to bar chart."
             )
+            template_key = "bar_chart"
+        else:
+            template_key = chart_type_mapping[chart_type]
 
         template_code = templates[template_key]
         print(template_code)
