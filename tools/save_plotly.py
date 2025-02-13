@@ -27,7 +27,7 @@ class PlotlyPlotter:
             # Create a safe execution environment
             local_vars = {}
 
-            # Execute the Plotly code
+            # Execute the Plotly code to store the figure in local variables
             exec(plotly_code, globals(), local_vars)
 
             # Find the figure object in local variables
@@ -49,7 +49,7 @@ class PlotlyPlotter:
             # Save the figure
             pio.write_html(fig, str(output_path))
 
-            return f"Visualisation saved successfully to: {output_path}"
+            return {"path": str(output_path), "code": plotly_code}
 
         except Exception as e:
             logger.error(f"Error saving Plotly visualisation: {str(e)}")
@@ -60,7 +60,7 @@ def create_save_plotly_tool() -> Tool:
     saver = PlotlyPlotter()
 
     return Tool(
-        name="save_plotly_as_html",
+        name="save_plotly_visualisation",
         func=saver.save_plotly_visualisation,
-        description="Saves Plotly visualisation code as an HTML file",
+        description="Saves Plotly visualisation code as an HTML file and returns the path and code",
     )
