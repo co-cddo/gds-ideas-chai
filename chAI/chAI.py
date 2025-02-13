@@ -24,7 +24,6 @@ from chAI.bedrock import BedrockHandler
 from tools.visualisation_formatter import create_formatting_tool
 from tools.image_analysis_formatter import create_analysis_formatter_tool
 from tools.save_plotly import create_save_plotly_tool
-from tools.default_charts import PlotlyTemplates
 from chAI.constants import (
     LLMModel,
     AWSRegion,
@@ -34,7 +33,12 @@ from chAI.constants import (
     ChartType,
 )
 from chAI.types import DataFrameInfo
-from chAI.requests import DataFrameHandler, DataFrameJSONEncoder, ImageHandler
+from chAI.requests import (
+    DataFrameHandler,
+    DataFrameJSONEncoder,
+    ImageHandler,
+    TypeHandler,
+)
 
 logger = logging.getLogger()
 
@@ -73,13 +77,13 @@ class chAI:
         # Initialise handlers
         self.dataframe_handler = DataFrameHandler()
         self.image_handler = ImageHandler()
+        self.type_handler = TypeHandler()
 
         self.tools = [
             create_formatting_tool(),
             create_analysis_formatter_tool(),
             create_save_plotly_tool(),
         ]
-        self.plotly_templates = PlotlyTemplates()
         self.agent_executor = self.set_agent_executor()
 
         # Set up holder for visualisations
@@ -168,7 +172,9 @@ class chAI:
 
         elif chart_type:
             logger.info(f"Processing chart type request: {chart_type}")
-            final_prompt = self._handle_chart_request(chart_type, prompt)
+            final_prompt = self.type_handler.chart_request(
+                chart_type=chart_type, custom_prompt=prompt
+            )
 
         else:
             raise ValueError("No valid input provided")
@@ -181,55 +187,3 @@ class chAI:
         except Exception as e:
             logger.error(f"Error in handle_request: {str(e)}")
             raise ChAIError(f"Failed to process request: {e}")
-
-    def _handle_chart_request(
-        self,
-        chart_type: ChartType,
-        prompt: Optional[str],
-    ) -> str:
-        """Handle specific chart type request."""
-        templates = self.plotly_templates.get_templates()
-        chart_type_mapping = {
-            ChartType.BAR: "bar_chart",
-            ChartType.HISTOGRAM: "histogram",
-            ChartType.SCATTER: "scatter_plot",
-            ChartType.LINE: "line_chart",
-        }
-
-        if chart_type not in chart_type_mapping:
-            logger.warning(
-                f"Unsupported chart type: {chart_type}. Defaulting to bar chart."
-            )
-            template_key = "bar_chart"
-        else:
-            template_key = chart_type_mapping[chart_type]
-
-        template_code = templates[template_key]
-        print(template_code)
-
-        return f"""
-            You are a data visualization expert using Plotly to create a {chart_type} chart.
-
-            Here is your template code:
-            ```python
-            {template_code}
-            ```
-
-            Requirements:
-            {prompt if prompt else "No additional specific requirements stated"}
-
-            Instructions:
-            1. Modify the template code to meet the requirements
-            2. Use the save_plotly_visualisation tool to save your visualization
-            3. Return ONLY a JSON dictionary containing the tool's response
-
-            The JSON must be in this exact format:
-            ```json
-            {{
-                "path": "<path returned by tool>",
-                "code": "<complete code used>"
-            }}
-            ```
-
-            Remember: Return only the JSON dictionary, with no additional text or explanations.
-        """

@@ -7,6 +7,8 @@ from json import JSONEncoder
 import base64
 from pathlib import Path
 from chAI.constants import DataFrameLimits, APIVersion, MaxTokens
+from tools.default_charts import PlotlyTemplates
+from chAI.constants import ChartType
 
 logger = logging.getLogger(__name__)
 
@@ -337,4 +339,107 @@ class ImageHandler:
 
         except Exception as e:
             self.logger.error(f"Error handling image request: {str(e)}")
+            raise
+
+
+class TypeHandler:
+    """Handles chart type-specific visualization requests."""
+
+    def __init__(self):
+        """Initialize TypeHandler."""
+        self.logger = logging.getLogger(__name__)
+        self.plotly_templates = PlotlyTemplates()
+
+    def get_template(self, chart_type: ChartType) -> str:
+        """
+        Get the appropriate template for the requested chart type.
+
+        Args:
+            chart_type (ChartType): Type of chart requested
+
+        Returns:
+            str: Template code for the requested chart type
+
+        Raises:
+            Exception: If template retrieval fails
+        """
+        try:
+            templates = self.plotly_templates.get_templates()
+            chart_type_mapping = {
+                ChartType.BAR: "bar_chart",
+                ChartType.HISTOGRAM: "histogram",
+                ChartType.SCATTER: "scatter_plot",
+                ChartType.LINE: "line_chart",
+            }
+
+            if chart_type not in chart_type_mapping:
+                self.logger.warning(
+                    f"Unsupported chart type: {chart_type}. Defaulting to bar chart."
+                )
+                template_key = "bar_chart"
+            else:
+                template_key = chart_type_mapping[chart_type]
+
+            return templates[template_key]
+
+        except Exception as e:
+            self.logger.error(f"Error getting template: {str(e)}")
+            raise
+
+    def chart_request(
+        self,
+        chart_type: ChartType,
+        custom_prompt: Optional[str] = None,
+    ) -> str:
+        """
+        Handle complete chart type request.
+
+        Args:
+            chart_type (ChartType): Type of chart to create
+            custom_prompt (Optional[str]): Additional requirements for the chart
+
+        Returns:
+            str: Formatted prompt for visualization creation
+
+        Raises:
+            Exception: If request handling fails
+        """
+        try:
+            # Get appropriate template
+            template_code = self.get_template(chart_type)
+
+            # Return formatted prompt
+            return f"""
+                You are a data visualization expert using Plotly to create a {chart_type} chart.
+
+                Here is your template code:
+                ```python
+                {template_code}
+                ```
+
+                Requirements:
+                {custom_prompt if custom_prompt else "No additional specific requirements stated"}
+
+                Instructions:
+                1. Modify the template code to meet the requirements
+                2. Use the save_plotly_visualisation tool to save your visualization
+                3. Return ONLY a JSON dictionary containing the tool's response
+
+                The JSON must be in this exact format:
+                ```json
+                {{
+                    "path": "<path returned by tool>",
+                    "code": "<complete code used>"
+                }}
+                ```
+
+                Critical requirements:
+                - Use the save_plotly_visualisation tool to save the visualization
+                - Return only the JSON dictionary with path and code
+                - No additional text or explanations
+                - Ensure professional appearance and functionality
+            """
+
+        except Exception as e:
+            self.logger.error(f"Error handling chart request: {str(e)}")
             raise
