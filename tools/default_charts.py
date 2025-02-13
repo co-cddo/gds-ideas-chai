@@ -299,6 +299,7 @@ class PlotlyTemplates:
         # Line Chart Template:
         {templates['line_chart']}
 
-        Use these templates as references for styling and structure when creating your visualisations.
-        Adapt the code to match the specific data while maintaining the professional appearance.
+        Use these templates as references for styling and structure when creating visualisations from scratch where you have not already analysed 
+        the details of an input image.
+        Adapt the code to match the user request while maintaining the professional appearance.
         """
