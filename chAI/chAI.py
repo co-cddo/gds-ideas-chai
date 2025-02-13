@@ -34,7 +34,7 @@ from chAI.constants import (
     ChartType,
 )
 from chAI.types import DataFrameInfo
-from chAI.requests import DataFrameHandler, DataFrameJSONEncoder  # , ImageHandler
+from chAI.requests import DataFrameHandler, DataFrameJSONEncoder, ImageHandler
 
 logger = logging.getLogger()
 
@@ -72,7 +72,7 @@ class chAI:
 
         # Initialise handlers
         self.dataframe_handler = DataFrameHandler()
-        # self.image_handler = ImageHandler()
+        self.image_handler = ImageHandler()
 
         self.tools = [
             create_formatting_tool(),
@@ -114,151 +114,12 @@ class chAI:
             logger.error(f"Error setting up chAI agent: {str(e)}")
             raise
 
-    def encode_image(self, image_path: Union[str, Path]) -> str:
-        """
-        Encodes an image file to Base64 format for Claude's multi-modal API.
-
-        Args:
-            image_path (str): Path to the image file.
-
-        Returns:
-            str: Base64 encoded image string.
-
-        Raises:
-            Exception: If there's an error reading or encoding the image.
-        """
-        logger.info("Encoding image to base64")
-        try:
-            # Create image content string
-            path = Path(image_path)
-            with path.open("rb") as image_file:
-                return base64.b64encode(image_file.read()).decode("utf-8")
-
-        except Exception as e:
-            logger.error(f"Error encoding image: {str(e)}")
-            raise ChAIError(f"Failed to encode image: {e}")
-
-    def analyse_image(
-        self, base64_data: str, custom_prompt: Optional[str] = None
-    ) -> str:
-        """
-        Analyses an image using AWS Bedrock's Claude model and returns a structured analysis.
-
-            This method is designed to handle full base64 image data directly, bypassing the typical
-            agent tool limitations that might truncate the image data. It sends the image to Claude
-            along with a structured prompt for analysis.
-
-            Args:
-                base64_data (str): The base64-encoded image data to be analyzed.
-                custom_prompt (str, optional): Additional specific requirements or questions to be
-                    addressed in the analysis. Defaults to None.
-
-            Returns:
-                str: A structured analysis of the image including:
-                    - General description
-                    - Chart type identification
-                    - Axes analysis
-                    - Key insights and patterns
-                    - Plotly recreation code
-                    - Required data structure description
-                    If an error occurs, returns an error message string.
-
-            Raises:
-                No exceptions are raised directly; all exceptions are caught and returned as error messages.
-
-            Example:
-                >>> analyser = YourClass(config)
-                >>> base64_image = "base64_encoded_image_data"
-                >>> custom_requirements = "Focus on trend analysis and seasonal patterns"
-                >>> result = analyser.analyse_image(base64_image, custom_requirements)
-                >>> print(result)
-                # Description
-                This image shows a time series plot...
-                # Chart Analysis
-                ## Type
-                Line plot...
-
-            Notes:
-                - The method uses AWS Bedrock's Claude model specified in the configuration
-                - The analysis follows a structured format with markdown-style sections
-                - Maximum token limit is set to 2000 for the response
-                - Requires valid AWS credentials and permissions to access Bedrock
-        """
-        try:
-            if not base64_data:
-                return "Error: No image data provided"
-
-            analysis_prompt = f"""Analyse this image and provide a detailed analysis using the following structure:
-
-                # Description
-                [Provide a detailed description of what the image shows]
-
-                # Chart Analysis
-                ## Type
-                [Specify the type of visualisation (e.g., bar chart, line plot, scatter plot)]
-
-                ## Axes
-                [List all axes and what they represent]
-
-                ## Insights
-                [Consider the following specific requirements in your analysis:
-                {custom_prompt if custom_prompt else "No additional specific requirements stated"}
-            
-                Based on these requirements (if provided) and the image, provide detailed insights such as key patterns, trends or insights visible in the chart]
-
-                # Plotly Recreation
-                ## Code
-                ```python
-                [Provide a complete Plotly code snippet that could recreate this visualisation including the visible values for each variable]
-                ```
-
-                ## Data Structure
-                [Describe the data structure needed for the Plotly code]"""
-
-            body = {
-                "anthropic_version": APIVersion.BEDROCK.value,
-                "max_tokens": MaxTokens.DEFAULT,
-                "messages": [
-                    {
-                        "role": "user",
-                        "content": [
-                            {
-                                "type": "image",
-                                "source": {
-                                    "type": "base64",
-                                    "media_type": "image/png",
-                                    "data": base64_data,
-                                },
-                            },
-                            {"type": "text", "text": analysis_prompt},
-                        ],
-                    }
-                ],
-            }
-
-            body_bytes = json.dumps(body).encode("utf-8")
-
-            logger.debug(f"Request body: {json.dumps(body, indent=2)}")
-
-            # Call Bedrock
-            response = self.bedrock_runtime.invoke_model(
-                modelId=self.config.LLM_MODEL, body=body_bytes
-            )
-
-            response_body = json.loads(response.get("body").read())
-            return response_body.get("content", [])[0].get("text", "")
-
-        except Exception as e:
-            logger.error(f"Error in analyse_image: {str(e)}")
-            raise ChAIError(f"Failed to analyse image: {e}")
-
     def handle_request(
         self,
         data: Optional[pd.DataFrame] = None,
         prompt: Optional[str] = None,
         image_path: Optional[Union[str, Path]] = None,
         chart_type: Optional[str] = None,
-        output_path: Optional[Union[str, Path]] = None,
         **kwargs: Any,
     ) -> Dict[str, Any]:
         """
@@ -269,13 +130,12 @@ class chAI:
             prompt (Optional[str]): User instructions for visualisation.
             image_path (Optional[Union[str, Path]]): Path to image for analysis.
             chart_type (Optional[ChartType]): Specific chart type from ChartType enum.
-            output_path (Optional[Union[str, Path]]): Output directory for saved visualisations.
             **kwargs (Any): Additional keyword arguments for the LLM.
 
         Returns:
-            Dict[str, Any]: Agent response containing:
+            Dict[str, Any]: Agent response containing 1 or more of:
                 - Analysis results
-                - Generated visualisations
+                - Generated visualisations plotly code
                 - Output file paths
 
         Raises:
@@ -299,12 +159,16 @@ class chAI:
 
         elif isinstance(image_path, str):
             logger.info("Detected image location input. Preparing to review...")
-            final_prompt = self._handle_image_request(image_path, output_path)
-            print(final_prompt)
+            final_prompt = self.image_handler.image_request(
+                image_path=image_path,
+                bedrock_runtime=self.bedrock_runtime,
+                model_id=self.config.LLM_MODEL.value,
+                custom_prompt=prompt,
+            )
 
         elif chart_type:
             logger.info(f"Processing chart type request: {chart_type}")
-            final_prompt = self._handle_chart_request(chart_type, prompt, output_path)
+            final_prompt = self._handle_chart_request(chart_type, prompt)
 
         else:
             raise ValueError("No valid input provided")
@@ -318,64 +182,10 @@ class chAI:
             logger.error(f"Error in handle_request: {str(e)}")
             raise ChAIError(f"Failed to process request: {e}")
 
-    def _handle_image_request(
-        self, image_path: Union[str, Path], output_path: Optional[Union[str, Path]]
-    ) -> str:
-        """Handle image analysis request."""
-        image_base64 = self.encode_image(image_path)
-        image_response = self.analyse_image(image_base64)
-
-        return f"""
-            You are a data visualization expert tasked with recreating an image using Plotly.
-
-            First, analyze the image using these tools in order:
-            1. format_image_analysis_output tool
-            Input: {image_response}
-            Store the JSON output for the next steps.
-
-            2. save_plotly_visualisation tool
-            Use this after creating your visualization code.
-
-            Steps to create the visualization:
-            1. From the formatted analysis:
-            ```
-            - Use chart_analysis.type for visualization type
-            - Use chart_analysis.axes for data relationships
-            - Use chart_analysis.insights for key features
-            - Use plotly_recreation for implementation details
-            ```
-
-            2. Create your visualization with these requirements:
-            ```
-            - Match the identified chart type
-            - Replicate color scheme and styling
-            - Use 'plotly_white' template
-            - Include proper labels and legends
-            - Ensure professional formatting
-            - Add clear title and axis labels
-            ```
-
-            Return ONLY a JSON dictionary in this exact format:
-            ```json
-            {{
-                "analysis": "## Insights\\n1. <insight1>\\n2. <insight2>\\n...",
-                "path": "<path returned by save_plotly_visualisation>",
-                "code": "<complete plotly code used>"
-            }}
-            ```
-
-            Critical requirements:
-            - Maintain markdown formatting in analysis section
-            - Use exact path and code from save_plotly_visualisation tool response
-            - Return only the JSON dictionary, no additional text
-            - Ensure accurate recreation of the original image
-            """
-
     def _handle_chart_request(
         self,
         chart_type: ChartType,
         prompt: Optional[str],
-        output_path: Optional[Union[str, Path]],
     ) -> str:
         """Handle specific chart type request."""
         templates = self.plotly_templates.get_templates()
