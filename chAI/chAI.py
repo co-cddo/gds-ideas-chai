@@ -34,7 +34,7 @@ from chAI.constants import (
     ChartType,
 )
 from chAI.types import DataFrameInfo
-from chAI.requests import DataFrameHandler, DataFrameJSONEncoder
+from chAI.requests import DataFrameHandler, DataFrameJSONEncoder  # , ImageHandler
 
 logger = logging.getLogger()
 
@@ -51,16 +51,16 @@ class ChAIError(Exception):
 class chAI:
     def __init__(self, region_name: AWSRegion = AWSRegion.US_EAST_1):
         """
-        Initializes the chAI class with required configurations and tools.
+        Initialises the chAI class with required configurations and tools.
 
         Args:
             region_name (str, optional): AWS region name. Defaults to "us-east-1".
 
         Notes:
             - Sets up configuration using Config class
-            - Initializes Bedrock handler and runtime
+            - Initialises Bedrock handler and runtime
             - Loads LLM model and prompt
-            - Sets up visualization tools and templates
+            - Sets up visuasation tools and templates
             - Creates agent executor
         """
         logger.info("chAI Start")
@@ -72,6 +72,7 @@ class chAI:
 
         # Initialise handlers
         self.dataframe_handler = DataFrameHandler()
+        # self.image_handler = ImageHandler()
 
         self.tools = [
             create_formatting_tool(),
@@ -265,10 +266,10 @@ class chAI:
 
         Args:
             data (Optional[pd.DataFrame]): Input data for analysis.
-            prompt (Optional[str]): User instructions for visualization.
+            prompt (Optional[str]): User instructions for visualisation.
             image_path (Optional[Union[str, Path]]): Path to image for analysis.
             chart_type (Optional[ChartType]): Specific chart type from ChartType enum.
-            output_path (Optional[Union[str, Path]]): Output directory for saved visualizations.
+            output_path (Optional[Union[str, Path]]): Output directory for saved visualisations.
             **kwargs (Any): Additional keyword arguments for the LLM.
 
         Returns:
@@ -299,9 +300,10 @@ class chAI:
         elif isinstance(image_path, str):
             logger.info("Detected image location input. Preparing to review...")
             final_prompt = self._handle_image_request(image_path, output_path)
+            print(final_prompt)
 
         elif chart_type:
-            logger.info(f"Processing chart type request: {chart_type.value}")
+            logger.info(f"Processing chart type request: {chart_type}")
             final_prompt = self._handle_chart_request(chart_type, prompt, output_path)
 
         else:
@@ -312,41 +314,10 @@ class chAI:
             logger.info("Sending prompt and data to agent executor...")
             response = self.agent_executor.invoke({"input": final_prompt})
             print(response)
-            return response
+            return response["output"]
         except Exception as e:
             logger.error(f"Error in handle_request: {str(e)}")
             raise ChAIError(f"Failed to process request: {e}")
-
-    def _handle_dataframe_request(self, data: pd.DataFrame, base_prompt: str) -> str:
-        """Handle DataFrame analysis request."""
-        if len(data) > DataFrameLimits.MAX_ROWS:
-            logger.info(
-                f"DataFrame has more than {DataFrameLimits.MAX_ROWS} rows. Trimming for processing."
-            )
-            data = data.head(DataFrameLimits.MAX_ROWS)
-
-        dataframe_json = data.to_json(orient="split")
-
-        dataframe_prompt = f"""
-            DataFrame Information (Top {len(data)} Rows):
-            The following is a JSON representation of the DataFrame. Use this to suggest suitable visualisations:
-            {dataframe_json}
-
-            Instructions:
-            1. Analyse the DataFrame to understand its structure and content
-            2. Suggest meaningful visualisations based on the data and user's instructions
-            3. For each visualisation, include:
-            - Clear purpose
-            - Chart type
-            - Variables used
-            - Expected insights
-            4. Use the format_visualisation_output tool to structure your response
-            5. Make sure to provide concrete, specific suggestions based on the actual data
-
-            Remember to use the formatting tool for your final output.
-            """
-
-        return f"{base_prompt}\n\n{dataframe_prompt}"
 
     def _handle_image_request(
         self, image_path: Union[str, Path], output_path: Optional[Union[str, Path]]
@@ -354,41 +325,51 @@ class chAI:
         """Handle image analysis request."""
         image_base64 = self.encode_image(image_path)
         image_response = self.analyse_image(image_base64)
-        template_examples = PlotlyTemplates.get_template_prompt()
 
         return f"""
-            Use the image_analysis_formatter tool to standardise the output and create an interactive visualisation using appropriate default chart templates as reference.
+            Review the supplied image information and create an interactive visualisation that matches it as closely as possible.
             
-            1. First, format the analysis using image_analysis_formatter with these parameters:
-            - image_information: {image_response}
+            IMPORTANT: You MUST use the format_image_analysis_output tool first to structure the image analysis.
             
-            2. Based on the chart type identified in the analysis, use the appropriate template from below:
-            {template_examples}
+            1. Format the analysis:
+            - Use the format_image_analysis_output tool with this exact input: {image_response}
+            - Store the formatted JSON output for use in subsequent steps
+            - This step is mandatory and must be completed first
             
-            3. Use the matching template as a reference for structure and styling, particularly for:
-            - Layout organization
-            - Title and axis label formatting
-            - Template style ('plotly_white')
-            - Figure update_layout parameters
-            - Text positioning and formatting
+            2. Using the formatted analysis from step 1:
+            - Reference the chart_analysis.type to identify the visualisation type
+            - Use chart_analysis.axes to understand data relationships
+            - Review insights from chart_analysis.insights
+            - Check plotly_recreation for specific implementation details
             
-            4. Modify the template code with:
-            - The actual data from the image
-            - Similar color schemes where appropriate
-            - Matching chart type specifications
-            - Equivalent text positioning
+            3. Create a professional visualisation that:
+            - Matches the identified chart type from the formatted analysis
+            - Replicates the color scheme and styling
+            - Maintains proper layout and formatting
+            - Includes appropriate labels and legends
+            - Uses 'plotly_white' as the base template
             
-            5. Use save_plotly_visualisation to create an HTML file in the output_path folder. 
-            The requested output_path folder is {output_path}. 
-            If this is empty or None, then use the default path in plotly_visualisation.
+            4. Ensure the visualisation includes:
+            - Proper title and axis formatting
+            - Consistent text positioning and styling
+            - Appropriate data representation
+            - Professional appearance and readability
             
-            6. Return both:
-            - The formatted analysis from step 1
-            - The path to the saved visualisation
-            - The modified Plotly code used
+            5. Use save_plotly_visualisation to save the chart as an HTML file in the output_path folder.
+            The requested output_path folder is {str(output_path)}
+            If this is empty or None, then use the default path in save_plotly_visualisation.
             
-            Remember to maintain the professional appearance of the default templates while incorporating the specific data and styling from the image.
-            Choose the most appropriate template based on the chart type identified in your analysis.
+            6. Return a JSON dictionary with the following structure:
+            {{
+                "analysis": "## Insights\\n1. <insight1>\\n2. <insight2>\\n...",
+                "path": "The path returned by save_plotly_visualisation",
+                "code": {{complete plotly code used to create the visualisation}}
+            }}
+            
+            IMPORTANT: The analysis section in the JSON response should maintain the exact markdown formatting with the "## Insights" header and numbered list format.
+            
+            You MUST use the format_image_analysis_output tool for step 1 before proceeding with the visualisation creation.
+            Focus on creating a visualisation that accurately represents the original image while maintaining professional standards and interactive functionality.
         """
 
     def _handle_chart_request(
@@ -398,7 +379,7 @@ class chAI:
         output_path: Optional[Union[str, Path]],
     ) -> str:
         """Handle specific chart type request."""
-        templates = PlotlyTemplates.get_templates()
+        templates = self.plotly_templates.get_templates()
         chart_type_mapping = {
             ChartType.BAR: "bar_chart",
             ChartType.HISTOGRAM: "histogram",
@@ -415,7 +396,7 @@ class chAI:
         template_code = templates[template_key]
 
         return f"""
-            Create a default {chart_type.value} chart visualisation using this template as reference:
+            Create a default {chart_type} chart visualisation using this template as reference:
 
             # Template Code:
             {template_code}
@@ -424,11 +405,15 @@ class chAI:
             2. Consider the following specific requirements in adapting the code to the user's needs:
             {prompt if prompt else "No additional specific requirements stated"}
             3. Maintain the professional styling while adjusting for your specific needs and those of the user.
-            4. Use save_plotly_visualisation to save the chart as an HTML file in the output_path folder.
-            The requested output_path folder is {output_path}. 
-            If this is empty or None, then use the default path in plotly_visualisation.
+            4. Use save_plotly_visualisation to create an HTML file in the output_path folder.
+            {f'Use this exact output path: {str(output_path)}' if output_path else 'Use the default path in save_plotly_visualisation'}
             
-            Return:
-            - The modified Plotly code used
-            - The path to the saved visualisation
+            The save_plotly_visualisation tool will return a dictionary containing the path and code.
+            Use this response to create your final JSON response with exactly this structure:
+            {{
+                "path": "The path returned by save_plotly_visualisation",
+                "code": "The complete plotly code used to create the visualisation"
+            }}
+            
+            Do not modify the path or code returned by the tool - use them exactly as provided.
         """
