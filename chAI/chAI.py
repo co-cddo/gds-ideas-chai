@@ -355,18 +355,18 @@ class chAI:
             - Appropriate data representation
             - Professional appearance and readability
             
-            5. Use save_plotly_visualisation to save the chart as an HTML file in the output_path folder.
-            The requested output_path folder is {str(output_path)}
-            If this is empty or None, then use the default path in save_plotly_visualisation.
+            5. Use save_plotly_visualisation to create an HTML file in the output_path folder.
+            {f'Use this exact output path: {str(output_path)}' if output_path else 'Use the default path in save_plotly_visualisation'}
             
-            6. Return a JSON dictionary with the following structure:
+            6. Return a JSON dictionary with exactly this structure:
             {{
                 "analysis": "## Insights\\n1. <insight1>\\n2. <insight2>\\n...",
-                "path": "The path returned by save_plotly_visualisation",
-                "code": {{complete plotly code used to create the visualisation}}
+                "path": The exact path returned by save_plotly_visualisation,
+                "code": The complete plotly code used to create the visualisation
             }}
             
             IMPORTANT: The analysis section in the JSON response should maintain the exact markdown formatting with the "## Insights" header and numbered list format.
+            IMPORTANT: Use the exact path and code returned by the save_plotly_visualisation tool in your response.
             
             You MUST use the format_image_analysis_output tool for step 1 before proceeding with the visualisation creation.
             Focus on creating a visualisation that accurately represents the original image while maintaining professional standards and interactive functionality.
@@ -394,6 +394,7 @@ class chAI:
             )
 
         template_code = templates[template_key]
+        print(template_code)
 
         return f"""
             Create a default {chart_type} chart visualisation using this template as reference:
@@ -405,15 +406,16 @@ class chAI:
             2. Consider the following specific requirements in adapting the code to the user's needs:
             {prompt if prompt else "No additional specific requirements stated"}
             3. Maintain the professional styling while adjusting for your specific needs and those of the user.
-            4. Use save_plotly_visualisation to create an HTML file in the output_path folder.
-            {f'Use this exact output path: {str(output_path)}' if output_path else 'Use the default path in save_plotly_visualisation'}
-            
-            The save_plotly_visualisation tool will return a dictionary containing the path and code.
-            Use this response to create your final JSON response with exactly this structure:
+            4. Use the save_plotly_visualisatio tool to create an HTML file in the output_path folder.
+            {f'Use this exact output path: {str(output_path)}' if output_path else 'Use the default path in the save_plotly_visualisation tool'}
+            5. The save_plotly_visualisation tool will return a dictionary containing the path and code. Use this dictionary 
+            to build a JSON dictionary like the one below:
             {{
-                "path": "The path returned by save_plotly_visualisation",
-                "code": "The complete plotly code used to create the visualisation"
+                "path": "The exact path returned by the save_plotly_visualisation tool",
+                "code": "The complete plotly code used to create the visualisation by the save_plotly_visualisation tool"
             }}
             
-            Do not modify the path or code returned by the tool - use them exactly as provided.
+            DO NOT include any text before or after the JSON.
+            DO NOT add any explanations or descriptions.
+            ONLY return the JSON dictionary.
         """
