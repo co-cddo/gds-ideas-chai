@@ -42,7 +42,7 @@ class PlotlyPlotter:
 
             # Generate output path if not provided
             if output_path is None:
-                output_dir = Path.home() / "plotly_visualisations"
+                output_dir = Path.cwd() / "plotly_visualisations"
                 output_dir.mkdir(exist_ok=True)
                 output_path = output_dir / f"visualisation_{int(time.time())}.html"
 
