@@ -326,50 +326,50 @@ class chAI:
         image_response = self.analyse_image(image_base64)
 
         return f"""
-            Review the supplied image information and create an interactive visualisation that matches it as closely as possible.
-            
-            IMPORTANT: You MUST use the format_image_analysis_output tool first to structure the image analysis.
-            
-            1. Format the analysis:
-            - Use the format_image_analysis_output tool with this exact input: {image_response}
-            - Store the formatted JSON output for use in subsequent steps
-            - This step is mandatory and must be completed first
-            
-            2. Using the formatted analysis from step 1:
-            - Reference the chart_analysis.type to identify the visualisation type
-            - Use chart_analysis.axes to understand data relationships
-            - Review insights from chart_analysis.insights
-            - Check plotly_recreation for specific implementation details
-            
-            3. Create a professional visualisation that:
-            - Matches the identified chart type from the formatted analysis
-            - Replicates the color scheme and styling
-            - Maintains proper layout and formatting
-            - Includes appropriate labels and legends
-            - Uses 'plotly_white' as the base template
-            
-            4. Ensure the visualisation includes:
-            - Proper title and axis formatting
-            - Consistent text positioning and styling
-            - Appropriate data representation
-            - Professional appearance and readability
-            
-            5. Use save_plotly_visualisation to create an HTML file in the output_path folder.
-            {f'Use this exact output path: {str(output_path)}' if output_path else 'Use the default path in save_plotly_visualisation tool'}
-            
-            6. Return a JSON dictionary with exactly this structure:
+            You are a data visualization expert tasked with recreating an image using Plotly.
+
+            First, analyze the image using these tools in order:
+            1. format_image_analysis_output tool
+            Input: {image_response}
+            Store the JSON output for the next steps.
+
+            2. save_plotly_visualisation tool
+            Use this after creating your visualization code.
+
+            Steps to create the visualization:
+            1. From the formatted analysis:
+            ```
+            - Use chart_analysis.type for visualization type
+            - Use chart_analysis.axes for data relationships
+            - Use chart_analysis.insights for key features
+            - Use plotly_recreation for implementation details
+            ```
+
+            2. Create your visualization with these requirements:
+            ```
+            - Match the identified chart type
+            - Replicate color scheme and styling
+            - Use 'plotly_white' template
+            - Include proper labels and legends
+            - Ensure professional formatting
+            - Add clear title and axis labels
+            ```
+
+            Return ONLY a JSON dictionary in this exact format:
+            ```json
             {{
                 "analysis": "## Insights\\n1. <insight1>\\n2. <insight2>\\n...",
-                "path": The exact path returned by save_plotly_visualisation tool,
-                "code": The complete plotly code used to create the visualisation tool
+                "path": "<path returned by save_plotly_visualisation>",
+                "code": "<complete plotly code used>"
             }}
-            
-            IMPORTANT: The analysis section in the JSON response should maintain the exact markdown formatting with the "## Insights" header and numbered list format.
-            IMPORTANT: Use the exact path and code returned by the save_plotly_visualisation tool in your response.
-            
-            You MUST use the format_image_analysis_output tool for step 1 before proceeding with the visualisation creation.
-            Focus on creating a visualisation that accurately represents the original image while maintaining professional standards and interactive functionality.
-        """
+            ```
+
+            Critical requirements:
+            - Maintain markdown formatting in analysis section
+            - Use exact path and code from save_plotly_visualisation tool response
+            - Return only the JSON dictionary, no additional text
+            - Ensure accurate recreation of the original image
+            """
 
     def _handle_chart_request(
         self,
