@@ -37,12 +37,13 @@ setup(
     extras_require={
         "test": ["pytest"],
         "dev": [
-            "mkdocs",  # Documentation generator
-            "mkdocs-material",  # Material theme for mkdocs
-            "mkdocs-glightbox",  # Lightbox for MkDocs image handling
-            "setuptools",  # For packaging and distributing Python packages
-            "build",  # For building your package
-            "twine",  # For publishing packages to PyPI
+            "black",
+            "mkdocs",
+            "mkdocs-material",
+            "mkdocs-glightbox",
+            "setuptools",
+            "build",
+            "twine",
         ],
     },
     license="MIT",
