@@ -3,8 +3,8 @@ import logging
 import boto3
 from botocore.exceptions import ClientError
 from langchain_aws import ChatBedrock
-from chAI.constants import AWSRegion, LLMModel
-from chAI.config import Config, ConfigurationError
+from .constants import AWSRegion, LLMModel
+from .config import Config, ConfigurationError
 
 logger = logging.getLogger(__name__)
 

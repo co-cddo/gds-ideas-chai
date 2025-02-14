@@ -10,6 +10,8 @@ from uuid import uuid4
 import boto3
 from dotenv import load_dotenv
 from pathlib import Path
+import pandas as pd
+import base64
 
 # Import agent dependencies
 from langchain import hub
@@ -19,31 +21,24 @@ from langchain.agents import (
 )
 
 # Import custom classes and tools
-from chAI.config import Config
-from chAI.bedrock import BedrockHandler
-from tools.visualisation_formatter import create_formatting_tool
-from tools.image_analysis_formatter import create_analysis_formatter_tool
-from tools.save_plotly import create_save_plotly_tool
-from chAI.constants import (
+from .config import Config
+from .bedrock import BedrockHandler
+from .tools import (
+    create_formatting_tool,
+    create_analysis_formatter_tool,
+    create_save_plotly_tool,
+)
+from .constants import (
     LLMModel,
     AWSRegion,
-    APIVersion,
-    MaxTokens,
-    DataFrameLimits,
-    ChartType,
 )
-from chAI.types import DataFrameInfo
-from chAI.requests import (
+from .requests import (
     DataFrameHandler,
-    DataFrameJSONEncoder,
     ImageHandler,
     TypeHandler,
 )
 
 logger = logging.getLogger()
-
-import pandas as pd
-import base64
 
 
 class ChAIError(Exception):
@@ -53,7 +48,7 @@ class ChAIError(Exception):
 
 
 class chAI:
-    def __init__(self, region_name: AWSRegion = AWSRegion.US_EAST_1):
+    def __init__(self):
         """
         Initialises the chAI class with required configurations and tools.
 

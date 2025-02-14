@@ -3,7 +3,7 @@ import os
 import json
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Literal, Optional
-from chAI.constants import LLMModel, AWSRegion
+from .constants import LLMModel, AWSRegion
 
 logger = logging.getLogger(__name__)
 

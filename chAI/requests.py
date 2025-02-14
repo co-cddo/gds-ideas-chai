@@ -6,9 +6,9 @@ from datetime import datetime
 from json import JSONEncoder
 import base64
 from pathlib import Path
-from chAI.constants import DataFrameLimits, APIVersion, MaxTokens
-from tools.default_charts import PlotlyTemplates
-from chAI.constants import ChartType
+from .constants import DataFrameLimits, APIVersion, MaxTokens
+from .tools.default_charts import PlotlyTemplates
+from .constants import ChartType
 
 logger = logging.getLogger(__name__)
 
