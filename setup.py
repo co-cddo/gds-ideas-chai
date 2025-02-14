@@ -34,6 +34,17 @@ setup(
         "python-dotenv>=1.0.1",
     ],
     python_requires=">=3.11",
+    extras_require={
+        "test": ["pytest"],
+        "dev": [
+            "mkdocs",  # Documentation generator
+            "mkdocs-material",  # Material theme for mkdocs
+            "mkdocs-glightbox",  # Lightbox for MkDocs image handling
+            "setuptools",  # For packaging and distributing Python packages
+            "build",  # For building your package
+            "twine",  # For publishing packages to PyPI
+        ],
+    },
     license="MIT",
     classifiers=[
         "Development Status :: 3 - Alpha",
