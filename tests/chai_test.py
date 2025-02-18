@@ -1,169 +1,196 @@
-import pytest
-from unittest.mock import Mock, patch
 import os
 import sys
+import pytest
+from unittest.mock import Mock, patch, ANY
+import pandas as pd
+from pathlib import Path
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from chAI.constants import ChartType
 from chAI.requests import TypeHandler
 from chAI.chAI import chAI, ChAIError
-
-# Sample template for testing
-SAMPLE_TEMPLATE = """
-import plotly.graph_objects as go
-import numpy as np
-
-# Generate sample data
-x = np.linspace(0, 10, 100)
-y = np.sin(x)
-
-# Create figure
-fig = go.Figure()
-fig.add_trace(go.Scatter(x=x, y=y))
-
-# Update layout
-fig.update_layout(
-    title='Sample Plot',
-    xaxis_title='X',
-    yaxis_title='Y'
-)
-"""
+from chAI.config import Config
+from chAI.constants import LLMModel, AWSRegion
 
 
 @pytest.fixture
-def type_handler():
-    return TypeHandler()
+def mock_image_handler():
+    with patch("chAI.chAI.ImageHandler") as mock:
+        handler_instance = Mock()
+        handler_instance.image_request.return_value = "Image prompt"
+        mock.return_value = handler_instance
+        yield mock
 
 
 @pytest.fixture
-def mock_plotly_templates():
-    templates = {
-        "bar_chart": SAMPLE_TEMPLATE,
-        "scatter_plot": SAMPLE_TEMPLATE,
-        "line_chart": SAMPLE_TEMPLATE,
-        "histogram": SAMPLE_TEMPLATE,
-    }
-    return templates
+def mock_config():
+    """Mock Config class"""
+    with patch("chAI.chAI.Config") as mock:  # Updated patch path
+        config_instance = Mock(spec=Config)
+        config_instance.LLM_MODEL = LLMModel.CLAUDE_SONNET_3_5
+        config_instance.LLM_REGION = AWSRegion.US_EAST_1
+        config_instance.AWS_PROFILE = "test-profile"
+        mock.return_value = config_instance
+        yield mock
 
 
-class TestTypeHandler:
-    """Tests for TypeHandler class"""
-
-    def test_init(self, type_handler):
-        """Test TypeHandler initialization"""
-        assert isinstance(type_handler, TypeHandler)
-        assert type_handler.logger is not None
-
-    @patch("chAI.requests.PlotlyTemplates")
-    def test_get_template_valid_type(
-        self, mock_plotly, type_handler, mock_plotly_templates
-    ):
-        """Test getting template for valid chart type"""
-        mock_plotly.return_value.get_templates.return_value = mock_plotly_templates
-
-        template = type_handler.get_template(ChartType.BAR)
-        assert template == SAMPLE_TEMPLATE
-
-        template = type_handler.get_template(ChartType.SCATTER)
-        assert template == SAMPLE_TEMPLATE
-
-    @patch("chAI.requests.PlotlyTemplates")
-    def test_get_template_invalid_type(
-        self, mock_plotly, type_handler, mock_plotly_templates
-    ):
-        """Test getting template for invalid chart type defaults to bar chart"""
-        mock_plotly.return_value.get_templates.return_value = mock_plotly_templates
-
-        template = type_handler.get_template("invalid_type")
-        assert template == SAMPLE_TEMPLATE  # Should return bar_chart template
-
-    @patch("chAI.requests.PlotlyTemplates")
-    def test_get_template_error(self, mock_plotly, type_handler):
-        """Test error handling in get_template"""
-        mock_plotly.return_value.get_templates.side_effect = Exception("Template error")
-
-        with pytest.raises(Exception):
-            type_handler.get_template(ChartType.BAR)
-
-    def test_chart_request_valid(self, type_handler):
-        """Test chart request with valid inputs"""
-        with patch.object(type_handler, "get_template", return_value=SAMPLE_TEMPLATE):
-            prompt = type_handler.chart_request(
-                chart_type=ChartType.BAR, custom_prompt="Make it red"
-            )
-
-            assert isinstance(prompt, str)
-            assert "Make it red" in prompt
-            assert "BAR" in prompt
-            assert SAMPLE_TEMPLATE in prompt
-
-    def test_chart_request_no_prompt(self, type_handler):
-        """Test chart request without custom prompt"""
-        with patch.object(type_handler, "get_template", return_value=SAMPLE_TEMPLATE):
-            prompt = type_handler.chart_request(chart_type=ChartType.BAR)
-
-            assert isinstance(prompt, str)
-            assert "No additional specific requirements stated" in prompt
-            assert SAMPLE_TEMPLATE in prompt
-
-    def test_chart_request_error(self, type_handler):
-        """Test error handling in chart request"""
-        with patch.object(
-            type_handler, "get_template", side_effect=Exception("Template error")
-        ):
-            with pytest.raises(Exception):
-                type_handler.chart_request(ChartType.BAR)
+@pytest.fixture
+def mock_bedrock():
+    """Mock BedrockHandler"""
+    with patch("chAI.chAI.BedrockHandler") as mock:  # Updated patch path
+        bedrock_instance = Mock()
+        bedrock_instance.set_runtime.return_value = Mock()
+        bedrock_instance.get_llm.return_value = Mock()
+        mock.return_value = bedrock_instance
+        yield mock
 
 
-class TestChAIIntegration:
-    """Integration tests for chAI with TypeHandler"""
-
-    @pytest.fixture
-    def chai_instance(self):
-        with patch("chAI.chAI.BedrockHandler"), patch("chAI.chAI.hub.pull"), patch(
-            "chAI.chAI.create_json_chat_agent"
-        ):
-            return chAI()
-
-    def test_handle_request_chart_type(self, chai_instance):
-        """Test handling chart type request"""
-        with patch.object(
-            chai_instance.type_handler, "chart_request"
-        ) as mock_chart_request, patch.object(
-            chai_instance.agent_executor, "invoke"
-        ) as mock_invoke:
-
-            mock_chart_request.return_value = "test prompt"
-            mock_invoke.return_value = {
-                "output": {"path": "test.html", "code": "test code"}
-            }
-
-            result = chai_instance.handle_request(
-                chart_type=ChartType.BAR, prompt="Make it red"
-            )
-
-            assert isinstance(result, dict)
-            assert "path" in result
-            assert "code" in result
-
-            mock_chart_request.assert_called_once_with(
-                chart_type=ChartType.BAR, custom_prompt="Make it red"
-            )
-
-    def test_handle_request_error(self, chai_instance):
-        """Test error handling in handle_request"""
-        with patch.object(
-            chai_instance.type_handler,
-            "chart_request",
-            side_effect=Exception("Test error"),
-        ):
-            with pytest.raises(ChAIError):
-                chai_instance.handle_request(chart_type=ChartType.BAR)
+@pytest.fixture
+def chai_instance(mock_config, mock_bedrock):
+    """Create a chAI instance with mocked dependencies"""
+    return chAI()
 
 
-def test_chart_type_enum():
-    """Test ChartType enum values"""
-    assert ChartType.BAR.value == "bar"
-    assert ChartType.SCATTER.value == "scatter"
-    assert ChartType.LINE.value == "line"
-    assert ChartType.HISTOGRAM.value == "histogram"
+@pytest.fixture
+def mock_agent_executor():
+    with patch("chAI.chAI.AgentExecutor") as mock:
+        mock.return_value = Mock()
+        yield mock
+
+
+@pytest.fixture
+def mock_create_json_chat_agent():
+    with patch("chAI.chAI.create_json_chat_agent") as mock:
+        mock.return_value = Mock()
+        yield mock
+
+
+@pytest.fixture
+def mock_dataframe_handler():
+    with patch("chAI.chAI.DataFrameHandler") as mock:
+        handler_instance = Mock()
+        handler_instance.dataframe_request.return_value = "DataFrame prompt"
+        mock.return_value = handler_instance
+        yield mock
+
+
+@pytest.fixture
+def mock_image_handler():
+    with patch("chAI.chAI.ImageHandler") as mock:
+        handler_instance = Mock()
+        handler_instance.image_request.return_value = "Image prompt"
+        mock.return_value = handler_instance
+        yield mock
+
+
+@pytest.fixture
+def mock_type_handler():
+    with patch("chAI.chAI.TypeHandler") as mock:
+        handler_instance = Mock()
+        handler_instance.chart_request.return_value = "Chart type prompt"
+        mock.return_value = handler_instance
+        yield mock
+
+
+def test_chai_initialization(mock_config, mock_bedrock):
+    """Test successful initialization of chAI class"""
+    chai = chAI()
+
+    assert chai.config is not None
+    assert chai.bedrock is not None
+    assert chai.bedrock_runtime is not None
+    assert chai.llm is not None
+    assert len(chai.tools) == 3
+    assert chai.agent_executor is not None
+    assert chai.visualisations is None
+
+    # Verify the mocks were called correctly
+    mock_config.assert_called_once()
+    mock_bedrock.assert_called_once()
+
+
+def test_set_agent_executor_success(
+    chai_instance, mock_create_json_chat_agent, mock_agent_executor
+):
+    """Test successful creation of agent executor"""
+    result = chai_instance.set_agent_executor(verbose=True, handle_parse=True)
+    mock_create_json_chat_agent.assert_called_once_with(
+        chai_instance.llm, chai_instance.tools, chai_instance.prompt
+    )
+    mock_agent_executor.assert_called_once_with(
+        agent=mock_create_json_chat_agent.return_value,
+        tools=chai_instance.tools,
+        verbose=True,
+        handle_parsing_errors=True,
+    )
+    assert result == mock_agent_executor.return_value
+
+
+def test_set_agent_executor_failure(chai_instance, mock_create_json_chat_agent):
+    """Test handling of exceptions during agent executor creation"""
+    mock_create_json_chat_agent.side_effect = Exception("Test error")
+    with pytest.raises(Exception) as exc_info:
+        chai_instance.set_agent_executor()
+    assert str(exc_info.value) == "Test error"
+
+
+def test_handle_request_dataframe(chai_instance, mock_dataframe_handler):
+    """Test handling DataFrame input"""
+    test_df = pd.DataFrame({"col1": [1, 2, 3]})
+    chai_instance.agent_executor = Mock()
+    chai_instance.agent_executor.invoke.return_value = {"output": "Test response"}
+    # Setting handler manually because mocks aren't deal with properly
+    chai_instance.dataframe_handler = mock_dataframe_handler.return_value
+    result = chai_instance.handle_request(data=test_df, prompt="Test prompt")
+    assert result == "Test response"
+    chai_instance.dataframe_handler.dataframe_request.assert_called_once()
+
+
+def test_handle_request_image(chai_instance, mock_image_handler, tmp_path):
+    """Test handling image input"""
+    # Create temporary test image empty file because needs a real file to work with
+    test_image_path = tmp_path / "test_image.jpg"
+    test_image_path.write_text("")
+    chai_instance.agent_executor = Mock()
+    chai_instance.agent_executor.invoke.return_value = {"output": "Test response"}
+    # Setting handler manually because mocks aren't deal with properly
+    chai_instance.image_handler = mock_image_handler.return_value
+    result = chai_instance.handle_request(
+        image_path=str(test_image_path), prompt="Test prompt"
+    )
+    assert result == "Test response"
+    chai_instance.image_handler.image_request.assert_called_once()
+
+
+def test_handle_request_chart_type(chai_instance, mock_type_handler):
+    """Test handling chart type input"""
+    test_chart_type = "bar"
+    chai_instance.agent_executor = Mock()
+    chai_instance.agent_executor.invoke.return_value = {"output": "Test response"}
+    # Again setting handler manually because mocks aren't deal with properly
+    chai_instance.type_handler = mock_type_handler.return_value
+    result = chai_instance.handle_request(
+        chart_type=test_chart_type, prompt="Test prompt"
+    )
+    assert result == "Test response"
+    chai_instance.type_handler.chart_request.assert_called_once()
+
+
+def test_handle_request_no_input(chai_instance):
+    """Test handling no valid input"""
+    with pytest.raises(ValueError) as exc_info:
+        chai_instance.handle_request(prompt="Test prompt")
+    assert str(exc_info.value) == "No valid input provided"
+
+
+def test_handle_request_execution_error(chai_instance):
+    """Test handling executor error"""
+    # Setup
+    test_df = pd.DataFrame({"col1": [1, 2, 3]})
+    chai_instance.agent_executor = Mock()
+    chai_instance.agent_executor.invoke.side_effect = Exception("Test error")
+
+    # Execute and Assert
+    with pytest.raises(ChAIError) as exc_info:
+        chai_instance.handle_request(data=test_df, prompt="Test prompt")
+    assert str(exc_info.value) == "Failed to process request: Test error"
