@@ -1,3 +1,5 @@
+![Banner](docs/img/chai_cropped.png)
+
 # chAI
 An LLM-powered charting package to enable visualisation suggestion, image review and analysis, copycat functionality to replicate a provided chart in plotly, and output of standardised plotly code for bar, histogram, scatter and line charts.
 

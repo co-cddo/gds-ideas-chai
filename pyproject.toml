@@ -53,8 +53,8 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/co-cddo/c-af-chartist"
-"Bug Tracker" = "https://github.com/co-cddo/c-af-chartist/issues"
+Homepage = "https://github.com/co-cddo/gds-idea-chai"
+"Bug Tracker" = "https://github.com/co-cddo/gds-idea-chai/issues"
 
 [tool.hatch.build.targets.wheel]
 packages = ["chAI"]
