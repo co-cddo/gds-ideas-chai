@@ -107,3 +107,4 @@ To install dev and test dependencies:
 
 ## To Do
 - Additional unit tests on chAI tools
+- Specific examples folder instead of just Notebooks
