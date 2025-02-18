@@ -1,0 +1,64 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "chAI"
+version = "0.1"
+authors = [
+    {name = "Jose Orjales", email = "jose.orjales@digital.cabinet-office.gov.uk"},
+]
+description = "An LLM powered charting package"
+readme = "README.md"
+requires-python = ">=3.11"
+license = {text = "MIT"}
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Education",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Operating System :: OS Independent",
+    "Topic :: Scientific/Engineering :: Visualization",
+    "License :: OSI Approved :: MIT License",
+]
+dependencies = [
+    "pip>=24.0",
+    "boto3>=1.36.7",
+    "ipykernel>=6.29.5",
+    "ipywidgets>=8.1.5",
+    "langchain>=0.3.16",
+    "langchain-aws>=0.2.11",
+    "langchain-community>=0.3.16",
+    "langchain-core>=0.3.32",
+    "langchain-experimental>=0.3.4",
+    "langchain-text-splitters>=0.3.5",
+    "nbformat>=5.10.4",
+    "numpy>=1.26.4",
+    "pandas>=2.2.3",
+    "plotly>=5.24.1",
+    "python-dotenv>=1.0.1",
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest",
+]
+dev = [
+    "black",
+    "mkdocs",
+    "mkdocs-material",
+    "mkdocs-glightbox",
+    "build",
+    "twine",
+    "hatchling"
+]
+
+[project.urls]
+Homepage = "https://github.com/co-cddo/c-af-chartist"
+"Bug Tracker" = "https://github.com/co-cddo/c-af-chartist/issues"
+
+[tool.hatch.build.targets.wheel]
+packages = ["chAI"]
+
+[tool.hatch.metadata]
+allow-direct-references = true
