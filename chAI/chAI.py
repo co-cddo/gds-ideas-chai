@@ -52,9 +52,6 @@ class chAI:
         """
         Initialises the chAI class with required configurations and tools.
 
-        Args:
-            region_name (str, optional): AWS region name. Defaults to "us-east-1".
-
         Notes:
             - Sets up configuration using Config class
             - Initialises Bedrock handler and runtime
@@ -84,7 +81,7 @@ class chAI:
         # Set up holder for visualisations
         self.visualisations = None
 
-    def set_agent_executor(self, verbose=False, handle_parse=True):
+    def set_agent_executor(self, verbose=False, handle_parse=True) -> AgentExecutor:
         """
         Sets up the LangChain agent executor with specified tools and configurations.
 

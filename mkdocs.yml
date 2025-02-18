@@ -26,7 +26,7 @@ theme:
       - search.highlight
       - toc.follow
 repo_name: chAI
-repo_url: https://github.com/co-cddo/c-af-chartist
+repo_url: https://github.com/co-cddo/gds-idea-chai
 
 markdown_extensions:
   - attr_list
@@ -42,10 +42,25 @@ markdown_extensions:
   - toc:
         permalink: true
 
-nav:
-  - Home: index.md
-
 plugins:
   - glightbox
   - search 
+  - mkdocstrings:
+        default_handler: python
+        handlers:
+          python:
+            paths: [.]
+            options:
+              show_root_heading: true
+              show_category_heading: true
+              show_submodules: true
 
+nav:
+  - Home: README.md
+  - API Reference:
+    - chAI: reference/chai.md
+    - Requests: reference/requests.md
+    - Config: reference/config.md
+
+watch:
+  - chAI

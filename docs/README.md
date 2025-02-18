@@ -1,4 +1,4 @@
-![Banner](docs/img/chai_cropped.png)
+![Banner](img/chai_cropped.png)
 
 # chAI
 An LLM-powered charting package to enable visualisation suggestion, image review and analysis, copycat functionality to replicate a provided chart in plotly, and output of standardised plotly code for bar, histogram, scatter and line charts.
@@ -43,7 +43,7 @@ prompt = "Analyse this dataset and suggest visualisations to explore trends and 
 response = chai.handle_request(data=sample_df, prompt=prompt)
 print(response)
 ```
-![Visuals Ideas Example](docs/img/visual_ideas.png)
+![Visuals Ideas Example](img/visual_ideas.png)
 
 ### Analysis and Copycat functionality
 This takes a stored PNG image and attempts to 1. replicate the image using plotly into an HTML file 2. analyse the image. The analytical review can be boosted by providing some additional context as to what the image might show (for example the chart relates to outcomes of a specific subset of data).
@@ -69,12 +69,12 @@ prompt = """
 
     Please provide your analysis in clear, business-friendly language suitable for stakeholders.
     """
-image_review = chai.handle_request(prompt = prompt, image_path='/Users/jose.orjales/c-af-chartist/tests/img/satisfaction.png')
+image_review = chai.handle_request(prompt = prompt, image_path='/Users/jose.orjales/gds-idea-chai/tests/img/satisfaction.png')
 print(json_images['analysis']) # For analysis
 print(json_images['code']) # For plotly code
 print(json_images['path']) # For the filepath
 ```
-![Analysis and Code Example](docs/img/analysis_code.png)
+![Analysis and Code Example](img/analysis_code.png)
 
 ### Chart Templates
 chAI has plotly code for several chart templates in its backend:
@@ -91,7 +91,7 @@ chart_prompt = "I want a red chart with bold axis titles and labels on the bars.
 chart_request = chai.handle_request(prompt = chart_prompt, chart_type='scatter')
 print(chart_request['code'])
 ```
-![Scatter Chart Example](docs/img/request_scatter.png)
+![Scatter Chart Example](img/request_scatter.png)
 
 
 ## Development
@@ -102,3 +102,6 @@ To install dev and test dependencies:
 - In the terminal type:
 
 ```pip install -e ".[test,dev]"```
+
+## To Do
+- Additional unit tests on chAI tools
