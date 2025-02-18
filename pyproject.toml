@@ -41,12 +41,14 @@ dependencies = [
 [project.optional-dependencies]
 test = [
     "pytest",
+    "pytest-cov>=6.0.0",
 ]
 dev = [
     "black",
     "mkdocs",
     "mkdocs-material",
     "mkdocs-glightbox",
+    "mkdocstrings[python]>=0.28.0",
     "build",
     "twine",
     "hatchling"
@@ -61,3 +63,8 @@ packages = ["chAI"]
 
 [tool.hatch.metadata]
 allow-direct-references = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["*.py"]
+addopts = "-v --cov=chAI"
