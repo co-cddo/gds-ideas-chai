@@ -106,5 +106,13 @@ To install dev and test dependencies:
 ```pip install -e ".[test,dev]"```
 
 ## To Do
+- Add session, llm_model, region to class inputs
+- Add uv dependency handling instead of pip
+- Change handle_request to brew
+- Change output response to be a data class called teapot (i.e. teapot.analysis to extract analysis response from image analysis)
+- Merge multi-modal API call with langchain-based API call for authentication
+- Move config validation to init.py of chAI class.
+- Amend example notebook to include more comprehensive commentary about when to use each functionality
 - Additional unit tests on chAI tools
-- Specific examples folder instead of just Notebooks
+- Tidy/remove logger config in example notebook
+- Add github workflow config to handle docs upload to site
