@@ -6,16 +6,16 @@ import pandas as pd
 from pathlib import Path
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from chAI.constants import ChartType
-from chAI.requests import TypeHandler
-from chAI.chAI import chAI, ChAIError
-from chAI.config import Config
-from chAI.constants import LLMModel, AWSRegion
+from chai.constants import ChartType
+from chai.requests import TypeHandler
+from chai.chAI import chAI, ChAIError
+from chai.config import Config
+from chai.constants import LLMModel, AWSRegion
 
 
 @pytest.fixture
 def mock_image_handler():
-    with patch("chAI.chAI.ImageHandler") as mock:
+    with patch("chai.chAI.ImageHandler") as mock:
         handler_instance = Mock()
         handler_instance.image_request.return_value = "Image prompt"
         mock.return_value = handler_instance
@@ -25,7 +25,7 @@ def mock_image_handler():
 @pytest.fixture
 def mock_config():
     """Mock Config class"""
-    with patch("chAI.chAI.Config") as mock:  # Updated patch path
+    with patch("chai.chAI.Config") as mock:
         config_instance = Mock(spec=Config)
         config_instance.LLM_MODEL = LLMModel.CLAUDE_SONNET_3_5
         config_instance.LLM_REGION = AWSRegion.US_EAST_1
@@ -37,7 +37,7 @@ def mock_config():
 @pytest.fixture
 def mock_bedrock():
     """Mock BedrockHandler"""
-    with patch("chAI.chAI.BedrockHandler") as mock:  # Updated patch path
+    with patch("chai.chAI.BedrockHandler") as mock:  # Updated patch path
         bedrock_instance = Mock()
         bedrock_instance.set_runtime.return_value = Mock()
         bedrock_instance.get_llm.return_value = Mock()
@@ -53,21 +53,21 @@ def chai_instance(mock_config, mock_bedrock):
 
 @pytest.fixture
 def mock_agent_executor():
-    with patch("chAI.chAI.AgentExecutor") as mock:
+    with patch("chai.chAI.AgentExecutor") as mock:
         mock.return_value = Mock()
         yield mock
 
 
 @pytest.fixture
 def mock_create_json_chat_agent():
-    with patch("chAI.chAI.create_json_chat_agent") as mock:
+    with patch("chai.chAI.create_json_chat_agent") as mock:
         mock.return_value = Mock()
         yield mock
 
 
 @pytest.fixture
 def mock_dataframe_handler():
-    with patch("chAI.chAI.DataFrameHandler") as mock:
+    with patch("chai.chAI.DataFrameHandler") as mock:
         handler_instance = Mock()
         handler_instance.dataframe_request.return_value = "DataFrame prompt"
         mock.return_value = handler_instance
@@ -76,7 +76,7 @@ def mock_dataframe_handler():
 
 @pytest.fixture
 def mock_image_handler():
-    with patch("chAI.chAI.ImageHandler") as mock:
+    with patch("chai.chAI.ImageHandler") as mock:
         handler_instance = Mock()
         handler_instance.image_request.return_value = "Image prompt"
         mock.return_value = handler_instance
@@ -85,7 +85,7 @@ def mock_image_handler():
 
 @pytest.fixture
 def mock_type_handler():
-    with patch("chAI.chAI.TypeHandler") as mock:
+    with patch("chai.chAI.TypeHandler") as mock:
         handler_instance = Mock()
         handler_instance.chart_request.return_value = "Chart type prompt"
         mock.return_value = handler_instance

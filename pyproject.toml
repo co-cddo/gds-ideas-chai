@@ -3,13 +3,13 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "chAI"
+name = "chai"
 version = "0.1"
 authors = [
     {name = "Jose Orjales", email = "jose.orjales@digital.cabinet-office.gov.uk"},
 ]
 description = "An LLM powered charting package"
-readme = "README.md"
+readme = "docs/README.md"
 requires-python = ">=3.11"
 license = {text = "MIT"}
 classifiers = [
@@ -58,8 +58,8 @@ dev = [
 Homepage = "https://github.com/co-cddo/gds-idea-chai"
 "Bug Tracker" = "https://github.com/co-cddo/gds-idea-chai/issues"
 
-[tool.hatch.build.targets.wheel]
-packages = ["chAI"]
+[tool.hatch.build]
+packages = ["src/chai"]
 
 [tool.hatch.metadata]
 allow-direct-references = true
@@ -67,4 +67,4 @@ allow-direct-references = true
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = ["*.py"]
-addopts = "-v --cov=chAI"
+addopts = "-v --cov=chai"

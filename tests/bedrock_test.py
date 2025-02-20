@@ -5,9 +5,9 @@ import os
 import sys
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from chAI.constants import AWSRegion, LLMModel
-from chAI.config import Config, ConfigurationError
-from chAI.bedrock import BedrockHandler, BedrockHandlerError
+from chai.constants import AWSRegion, LLMModel
+from chai.config import Config, ConfigurationError
+from chai.bedrock import BedrockHandler, BedrockHandlerError
 
 
 @pytest.fixture
@@ -90,7 +90,7 @@ def test_runtime_client_creation_successful(bedrock_handler):
 
 def test_runtime_client_creation_failure(bedrock_handler):
     """Test handling of runtime client creation failure"""
-    with patch("chAI.bedrock.boto3.Session") as mock_session:
+    with patch("chai.bedrock.boto3.Session") as mock_session:
         mock_session.side_effect = ClientError(
             error_response={"Error": {"Code": "InvalidProfile"}},
             operation_name="CreateClient",
@@ -124,7 +124,7 @@ def test_llm_creation_successful(bedrock_handler):
     """Test successful creation of LLM instance"""
     mock_llm = Mock()
 
-    with patch("chAI.bedrock.ChatBedrock", return_value=mock_llm) as mock_chat_bedrock:
+    with patch("chai.bedrock.ChatBedrock", return_value=mock_llm) as mock_chat_bedrock:
         llm = bedrock_handler.get_llm()
 
         assert llm == mock_llm
@@ -136,7 +136,7 @@ def test_llm_creation_successful(bedrock_handler):
 
 def test_runtime_client_creation_failure(bedrock_handler):
     """Test handling of runtime client creation failure"""
-    with patch("chAI.bedrock.boto3.Session") as mock_session:
+    with patch("chai.bedrock.boto3.Session") as mock_session:
         mock_session.side_effect = ClientError(
             error_response={"Error": {"Code": "InvalidProfile"}},
             operation_name="CreateClient",
@@ -152,7 +152,7 @@ def test_llm_caching(bedrock_handler):
     """Test that LLM instance is cached"""
     mock_llm = Mock()
 
-    with patch("chAI.bedrock.ChatBedrock", return_value=mock_llm) as mock_chat_bedrock:
+    with patch("chai.bedrock.ChatBedrock", return_value=mock_llm) as mock_chat_bedrock:
         # First access creates the LLM
         llm1 = bedrock_handler.get_llm()
         # Second access should create new instance (no caching in get_llm)
@@ -175,7 +175,7 @@ def test_llm_caching(bedrock_handler):
 )
 def test_set_runtime_errors(bedrock_handler, error, expected_message):
     """Test different error scenarios in set_runtime"""
-    with patch("chAI.bedrock.boto3.Session") as mock_session:
+    with patch("chai.bedrock.boto3.Session") as mock_session:
         mock_session.side_effect = error
 
         with pytest.raises(BedrockHandlerError) as exc_info:
@@ -191,8 +191,9 @@ def test_integration_llm_and_runtime(bedrock_handler):
     mock_session.client.return_value = mock_client
     mock_llm = Mock()
 
-    with patch("chAI.bedrock.boto3.Session") as mock_session_class, patch(
-        "chAI.bedrock.ChatBedrock", return_value=mock_llm
+    with (
+        patch("chai.bedrock.boto3.Session") as mock_session_class,
+        patch("chai.bedrock.ChatBedrock", return_value=mock_llm),
     ):
 
         mock_session_class.return_value = mock_session

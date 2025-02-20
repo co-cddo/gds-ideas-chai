@@ -4,14 +4,14 @@ import os
 import sys
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from chAI.config import (
+from src.chai.config import (
     Config,
     ConfigurationError,
     validate_aws_profile,
     validate_llm_region,
     validate_llm_model,
 )
-from chAI.constants import AWSRegion, LLMModel
+from src.chai.constants import AWSRegion, LLMModel
 
 
 @pytest.fixture(autouse=True)
