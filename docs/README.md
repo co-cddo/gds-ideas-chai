@@ -19,7 +19,7 @@ To use chAI:
 - Ensure you are in the root folder of the repo
 - In the terminal type:
 
-```pip install -e .```
+```pip install git+https://github.com/co-cddo/gds-idea-chai.git```
 
 You can now use chAI in your python notebook!
 
