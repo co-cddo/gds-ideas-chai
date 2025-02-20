@@ -106,10 +106,10 @@ To install dev and test dependencies:
 ```pip install -e ".[test,dev]"```
 
 ## To Do
-- Add session, llm_model, region to class inputs
+- Add session, llm_model, region to class inputs rather than reliant on env (AWS_PROFILE remains in .env)
 - Add uv dependency handling instead of pip
 - Change handle_request to brew
-- Change output response to be a data class called teapot (i.e. teapot.analysis to extract analysis response from image analysis)
+- Change output response to be a data class called teapot (i.e. teapot.analysis to extract analysis response from image analysis) and error handling on this class
 - Merge multi-modal API call with langchain-based API call for authentication
 - Move config validation to init.py of chAI class.
 - Amend example notebook to include more comprehensive commentary about when to use each functionality
