@@ -27,7 +27,7 @@ You can now use chAI in your python notebook!
 chAI comes with 3 LLM requests by default. To initialise chAI:
 
 ```
-from chAI import chAI
+from chai import chAI
 chai = chAI()
 ```
 
@@ -111,7 +111,7 @@ To install dev and test dependencies:
 - Change handle_request to brew
 - Change output response to be a data class called teapot (i.e. teapot.analysis to extract analysis response from image analysis) and error handling on this class
 - Merge multi-modal API call with langchain-based API call for authentication
-- Move config validation to init.py of chAI class.
+- Move config validation to init of chAI class.
 - Amend example notebook to include more comprehensive commentary about when to use each functionality
 - Additional unit tests on chAI tools
 - Tidy/remove logger config in example notebook

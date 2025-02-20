@@ -1,6 +1,6 @@
 # The config
 
-::: chAI.config
+::: chai.config
     handler: python
     options:
       show_root_heading: true

@@ -63,4 +63,4 @@ nav:
     - Config: reference/config.md
 
 watch:
-  - chAI
+  - src/chai
