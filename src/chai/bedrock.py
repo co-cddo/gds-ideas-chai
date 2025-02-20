@@ -51,44 +51,6 @@ class BedrockHandler:
         if not isinstance(self.profile, str):
             raise ConfigurationError(f"Invalid profile: {self.profile}")
 
-    @property  # Cache this as part of the class to improve performance on load
-    def runtime_client(self) -> boto3.client:
-        """
-        Get or create Bedrock runtime client.
-
-        Returns:
-            boto3.client: Bedrock runtime client
-
-        Raises:
-            BedrockHandlerError: If client creation fails
-        """
-        if self._runtime is None:
-            try:
-                self._runtime = self.set_runtime()
-            except ClientError as e:
-                logger.error(f"Failed to create Bedrock runtime client: {e}")
-                raise BedrockHandlerError(f"Bedrock client creation failed: {e}")
-        return self._runtime
-
-    @property  # Cache this as part of the class to improve performance on load
-    def llm(self) -> ChatBedrock:
-        """
-        Get or create ChatBedrock LLM instance.
-
-        Returns:
-            ChatBedrock: LLM instance
-
-        Raises:
-            BedrockHandlerError: If LLM creation fails
-        """
-        if self._llm is None:
-            try:
-                self._llm = self.get_llm()
-            except Exception as e:
-                logger.error(f"Failed to create ChatBedrock LLM instance: {e}")
-                raise BedrockHandlerError(f"LLM creation failed: {e}")
-        return self._llm
-
     def get_llm(self) -> ChatBedrock:
         """
         Create a new ChatBedrock LLM instance.
