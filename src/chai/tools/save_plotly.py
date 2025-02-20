@@ -5,7 +5,7 @@ from pathlib import Path
 import os
 import time
 
-logger = logging.getLogger()
+logger = logging.getLogger(__name__)
 
 
 class PlotlyPlotter:

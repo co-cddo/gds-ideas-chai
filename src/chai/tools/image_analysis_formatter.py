@@ -4,8 +4,7 @@ import logging
 from typing import Dict
 import re
 
-
-logger = logging.getLogger()
+logger = logging.getLogger(__name__)
 
 
 class ImageAnalysisFormatter:

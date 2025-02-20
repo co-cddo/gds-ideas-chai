@@ -38,7 +38,7 @@ from .requests import (
     TypeHandler,
 )
 
-logger = logging.getLogger()
+logger = logging.getLogger(__name__)
 
 
 class ChAIError(Exception):
