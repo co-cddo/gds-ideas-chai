@@ -18,6 +18,7 @@ from .bedrock import BedrockHandler
 
 # Import custom classes and tools
 from .config import Config
+from .constants import ChartType
 from .requests import (
     DataFrameHandler,
     ImageHandler,
@@ -151,7 +152,7 @@ class chAI:
         data: Optional[pd.DataFrame] = None,
         prompt: Optional[str] = None,
         image_path: Optional[Union[str, Path]] = None,
-        chart_type: Optional[str] = None,
+        chart_type: Optional[ChartType] = None,
         **kwargs: Any,
     ) -> ChAIResponse:
         """
@@ -161,7 +162,7 @@ class chAI:
             data (Optional[pd.DataFrame]): Input data for analysis.
             prompt (Optional[str]): User instructions for visualisation.
             image_path (Optional[Union[str, Path]]): Path to image for analysis.
-            chart_type (Optional[str]): Specific chart type identifier.
+            chart_type (Optional[ChartType]): Specific chart type from ChartType enum.
             **kwargs (Any): Additional keyword arguments for the LLM.
 
         Returns:
@@ -219,17 +220,12 @@ class chAI:
             response = self.agent_executor.invoke({"input": final_prompt})
             raw_output = response["output"]
 
-            print(f"Raw output type: {type(raw_output)}")
-            print(f"Raw output: {raw_output}")
-
             # Process the output based on the request type
             teapot_data = self._process_output(raw_output, request_type)
 
             # Create and return the response object
             raw_text = (
-                json.dumps(raw_output)
-                if isinstance(raw_output, dict)
-                else str(raw_output)
+                json.dumps(raw_output) if isinstance(raw_output, dict) else raw_output
             )
             return ChAIResponse(raw_text=raw_text, teapot=ChAITeapot(**teapot_data))
         except Exception as e:
