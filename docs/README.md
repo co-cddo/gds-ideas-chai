@@ -42,7 +42,7 @@ This takes an input dataframe and reviews the first 100 rows of data to suggest 
 # Example Code
 sample_df = create_sample_dataset()
 prompt = "Analyse this dataset and suggest visualisations to explore trends and insights."
-response = chai.handle_request(data=sample_df, prompt=prompt)
+response = chai.steep(data=sample_df, prompt=prompt)
 print(response)
 ```
 ![Visuals Ideas Example](img/visual_ideas.png)
@@ -71,7 +71,7 @@ prompt = """
 
     Please provide your analysis in clear, business-friendly language suitable for stakeholders.
     """
-image_review = chai.handle_request(prompt = prompt, image_path='/Users/jose.orjales/gds-idea-chai/tests/img/satisfaction.png')
+image_review = chai.steep(prompt = prompt, image_path='/Users/jose.orjales/gds-idea-chai/tests/img/satisfaction.png')
 print(json_images['analysis']) # For analysis
 print(json_images['code']) # For plotly code
 print(json_images['path']) # For the filepath
@@ -90,7 +90,7 @@ chAI can take user prompts to design a specified chart and provide required plot
 ```
 # Example Code
 chart_prompt = "I want a red chart with bold axis titles and labels on the bars. There should also be a legend showing each distinct category"
-chart_request = chai.handle_request(prompt = chart_prompt, chart_type='scatter')
+chart_request = chai.steep(prompt = chart_prompt, chart_type='scatter')
 print(chart_request['code'])
 ```
 ![Scatter Chart Example](img/request_scatter.png)
@@ -108,7 +108,7 @@ To install dev and test dependencies:
 ## To Do
 - Add session, llm_model, region to class inputs rather than reliant on env (AWS_PROFILE remains in .env)
 - Add uv dependency handling instead of pip
-- Change handle_request to brew
+- Change steep to brew
 - Change output response to be a data class called teapot (i.e. teapot.analysis to extract analysis response from image analysis) and error handling on this class
 - Merge multi-modal API call with langchain-based API call for authentication
 - Move config validation to init of chAI class.

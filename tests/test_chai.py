@@ -1,16 +1,14 @@
 import os
 import sys
-import pytest
-from unittest.mock import Mock, patch, ANY
+from unittest.mock import Mock, patch
+
 import pandas as pd
-from pathlib import Path
+import pytest
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from chai.constants import ChartType
-from chai.requests import TypeHandler
-from chai.chAI import chAI, ChAIError
+from chai.chAI import ChAIError, chAI
 from chai.config import Config
-from chai.constants import LLMModel, AWSRegion
+from chai.constants import AWSRegion, LLMModel
 
 
 @pytest.fixture
@@ -134,19 +132,19 @@ def test_set_agent_executor_failure(chai_instance, mock_create_json_chat_agent):
     assert str(exc_info.value) == "Test error"
 
 
-def test_handle_request_dataframe(chai_instance, mock_dataframe_handler):
+def test_steep_dataframe(chai_instance, mock_dataframe_handler):
     """Test handling DataFrame input"""
     test_df = pd.DataFrame({"col1": [1, 2, 3]})
     chai_instance.agent_executor = Mock()
     chai_instance.agent_executor.invoke.return_value = {"output": "Test response"}
     # Setting handler manually because mocks aren't deal with properly
     chai_instance.dataframe_handler = mock_dataframe_handler.return_value
-    result = chai_instance.handle_request(data=test_df, prompt="Test prompt")
+    result = chai_instance.steep(data=test_df, prompt="Test prompt")
     assert result == "Test response"
     chai_instance.dataframe_handler.dataframe_request.assert_called_once()
 
 
-def test_handle_request_image(chai_instance, mock_image_handler, tmp_path):
+def test_steep_image(chai_instance, mock_image_handler, tmp_path):
     """Test handling image input"""
     # Create temporary test image empty file because needs a real file to work with
     test_image_path = tmp_path / "test_image.jpg"
@@ -155,35 +153,31 @@ def test_handle_request_image(chai_instance, mock_image_handler, tmp_path):
     chai_instance.agent_executor.invoke.return_value = {"output": "Test response"}
     # Setting handler manually because mocks aren't deal with properly
     chai_instance.image_handler = mock_image_handler.return_value
-    result = chai_instance.handle_request(
-        image_path=str(test_image_path), prompt="Test prompt"
-    )
+    result = chai_instance.steep(image_path=str(test_image_path), prompt="Test prompt")
     assert result == "Test response"
     chai_instance.image_handler.image_request.assert_called_once()
 
 
-def test_handle_request_chart_type(chai_instance, mock_type_handler):
+def test_steep_chart_type(chai_instance, mock_type_handler):
     """Test handling chart type input"""
     test_chart_type = "bar"
     chai_instance.agent_executor = Mock()
     chai_instance.agent_executor.invoke.return_value = {"output": "Test response"}
     # Again setting handler manually because mocks aren't deal with properly
     chai_instance.type_handler = mock_type_handler.return_value
-    result = chai_instance.handle_request(
-        chart_type=test_chart_type, prompt="Test prompt"
-    )
+    result = chai_instance.steep(chart_type=test_chart_type, prompt="Test prompt")
     assert result == "Test response"
     chai_instance.type_handler.chart_request.assert_called_once()
 
 
-def test_handle_request_no_input(chai_instance):
+def test_steep_no_input(chai_instance):
     """Test handling no valid input"""
     with pytest.raises(ValueError) as exc_info:
-        chai_instance.handle_request(prompt="Test prompt")
+        chai_instance.steep(prompt="Test prompt")
     assert str(exc_info.value) == "No valid input provided"
 
 
-def test_handle_request_execution_error(chai_instance):
+def test_steep_execution_error(chai_instance):
     """Test handling executor error"""
     # Setup
     test_df = pd.DataFrame({"col1": [1, 2, 3]})
@@ -192,5 +186,5 @@ def test_handle_request_execution_error(chai_instance):
 
     # Execute and Assert
     with pytest.raises(ChAIError) as exc_info:
-        chai_instance.handle_request(data=test_df, prompt="Test prompt")
+        chai_instance.steep(data=test_df, prompt="Test prompt")
     assert str(exc_info.value) == "Failed to process request: Test error"

@@ -1,17 +1,9 @@
 # Import base requirements for data handling and AWS
-import json
 import logging
-import os
-import time
-from dataclasses import dataclass
-from datetime import datetime
-from typing import Union, Optional, Any, Dict, List
-from uuid import uuid4
-import boto3
-from dotenv import load_dotenv
 from pathlib import Path
+from typing import Any, Dict, Optional, Union
+
 import pandas as pd
-import base64
 
 # Import agent dependencies
 from langchain import hub
@@ -20,22 +12,19 @@ from langchain.agents import (
     create_json_chat_agent,
 )
 
+from .bedrock import BedrockHandler
+
 # Import custom classes and tools
 from .config import Config
-from .bedrock import BedrockHandler
-from .tools import (
-    create_formatting_tool,
-    create_analysis_formatter_tool,
-    create_save_plotly_tool,
-)
-from .constants import (
-    LLMModel,
-    AWSRegion,
-)
 from .requests import (
     DataFrameHandler,
     ImageHandler,
     TypeHandler,
+)
+from .tools import (
+    create_analysis_formatter_tool,
+    create_formatting_tool,
+    create_save_plotly_tool,
 )
 
 logger = logging.getLogger(__name__)
@@ -110,7 +99,7 @@ class chAI:
             logger.error(f"Error setting up chAI agent: {str(e)}")
             raise
 
-    def handle_request(
+    def steep(
         self,
         data: Optional[pd.DataFrame] = None,
         prompt: Optional[str] = None,
@@ -177,5 +166,5 @@ class chAI:
             response = self.agent_executor.invoke({"input": final_prompt})
             return response["output"]
         except Exception as e:
-            logger.error(f"Error in handle_request: {str(e)}")
+            logger.error(f"Error in steep: {str(e)}")
             raise ChAIError(f"Failed to process request: {e}")
