@@ -99,8 +99,8 @@ class chAI:
 
         self.config = Config()
         self.bedrock = BedrockHandler(self.config)
-        self.bedrock_runtime = self.bedrock.set_runtime()
-        self.llm = self.bedrock.get_llm()
+        self.bedrock_runtime = self.bedrock.runtime_client
+        self.llm = self.bedrock.llm
         self.prompt = hub.pull("hwchase17/react-chat-json")
 
         # Initialise handlers
