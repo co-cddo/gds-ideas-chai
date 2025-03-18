@@ -140,8 +140,10 @@ def test_steep_dataframe(chai_instance, mock_dataframe_handler):
     # Setting handler manually because mocks aren't deal with properly
     chai_instance.dataframe_handler = mock_dataframe_handler.return_value
     result = chai_instance.steep(data=test_df, prompt="Test prompt")
-    assert result == "Test response"
-    chai_instance.dataframe_handler.dataframe_request.assert_called_once()
+
+    # Check that we got a ChAIResponse object
+    assert result.raw_text == "Test response"
+    assert result.teapot.suggestions == "Test response"
 
 
 def test_steep_image(chai_instance, mock_image_handler, tmp_path):
@@ -154,8 +156,10 @@ def test_steep_image(chai_instance, mock_image_handler, tmp_path):
     # Setting handler manually because mocks aren't deal with properly
     chai_instance.image_handler = mock_image_handler.return_value
     result = chai_instance.steep(image_path=str(test_image_path), prompt="Test prompt")
-    assert result == "Test response"
-    chai_instance.image_handler.image_request.assert_called_once()
+
+    # Check that we got a ChAIResponse object
+    assert result.raw_text == "Test response"
+    assert result.teapot.analysis == "Test response"
 
 
 def test_steep_chart_type(chai_instance, mock_type_handler):
@@ -166,8 +170,10 @@ def test_steep_chart_type(chai_instance, mock_type_handler):
     # Again setting handler manually because mocks aren't deal with properly
     chai_instance.type_handler = mock_type_handler.return_value
     result = chai_instance.steep(chart_type=test_chart_type, prompt="Test prompt")
-    assert result == "Test response"
-    chai_instance.type_handler.chart_request.assert_called_once()
+
+    # Check that we got a ChAIResponse object
+    assert result.raw_text == "Test response"
+    assert result.teapot.code == "Test response"
 
 
 def test_steep_no_input(chai_instance):
