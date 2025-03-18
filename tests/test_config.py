@@ -1,15 +1,15 @@
-import pytest
-from unittest.mock import patch
 import os
 import sys
+
+import pytest
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from src.chai.config import (
     Config,
     ConfigurationError,
     validate_aws_profile,
-    validate_llm_region,
     validate_llm_model,
+    validate_llm_region,
 )
 from src.chai.constants import AWSRegion, LLMModel
 
@@ -83,9 +83,9 @@ def test_config_successful_initialization(mock_env):
 def test_config_direct_assignment():
     """Test successful initialization with direct assignment"""
     config = Config(
-        AWS_PROFILE="direct-profile",
-        LLM_REGION=AWSRegion.EU_WEST_1,
-        LLM_MODEL=LLMModel.CLAUDE_V2_1,
+        aws_profile="direct-profile",
+        llm_region="eu-west-1",
+        llm_model="anthropic.claude-v2:1",
     )
     assert config.AWS_PROFILE == "direct-profile"
     assert config.LLM_REGION == AWSRegion.EU_WEST_1
@@ -130,9 +130,9 @@ def test_invalid_type_assignment():
     """Test assignment of invalid types"""
     with pytest.raises(ConfigurationError):
         Config(
-            AWS_PROFILE=123,  # Should be string
-            LLM_REGION=AWSRegion.US_WEST_2,
-            LLM_MODEL=LLMModel.CLAUDE_V2_1,
+            aws_profile=123,
+            llm_region="us-west-2",
+            llm_model="anthropic.claude-v2:1",
         )
 
 
