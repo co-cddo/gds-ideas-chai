@@ -1,6 +1,7 @@
 # Import base requirements for data handling and AWS
 import json
 import logging
+import warnings
 from pathlib import Path
 from typing import Any, Dict, Optional, Union
 
@@ -28,6 +29,12 @@ from .tools import (
     create_analysis_formatter_tool,
     create_formatting_tool,
     create_save_plotly_tool,
+)
+
+warnings.filterwarnings(
+    "ignore",
+    category=UserWarning,
+    message=".*API key must be provided when using hosted LangSmith API.*",
 )
 
 logger = logging.getLogger(__name__)
@@ -84,9 +91,17 @@ class ChAIResponse(BaseModel):
 class chAI:
     def __init__(
         self,
+        aws_profile: Optional[str] = None,
+        llm_region: Optional[str] = None,
+        llm_model: Optional[str] = None,
     ):
         """
         Initialises the chAI class with required configurations and tools.
+
+        Args:
+            aws_profile: Optional AWS profile name. If provided, overrides environment variable.
+            llm_region: Optional LLM region. If provided, overrides environment variable.
+            llm_model: Optional LLM model. If provided, overrides environment variable.
 
         Notes:
             - AWS profile is loaded from environment variables via Config class
@@ -97,7 +112,9 @@ class chAI:
         """
         logger.info("chAI Start")
 
-        self.config = Config()
+        self.config = Config(
+            aws_profile=aws_profile, llm_region=llm_region, llm_model=llm_model
+        )
         self.bedrock = BedrockHandler(self.config)
         self.bedrock_runtime = self.bedrock.runtime_client
         self.llm = self.bedrock.llm
