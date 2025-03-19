@@ -26,7 +26,7 @@ theme:
       - search.highlight
       - toc.follow
 repo_name: chAI
-repo_url: https://github.com/co-cddo/gds-idea-chai
+repo_url: https://github.com/co-cddo/gds-ideas-chai
 
 markdown_extensions:
   - attr_list
