@@ -39,20 +39,20 @@ dependencies = [
 ]
 
 [dependency-groups]
-debug = [
+dev = [
+    "black",
+    "build",
+    "twine",
+    "hatchling",
     "pytest>=8.3.5",
     "pytest-cov>=6.0.0",
 ]
-dev = [
-    "black",
+docs = [
     "mkdocs",
     "mkdocs-material",
     "mkdocs-glightbox",
-    "mkdocstrings[python]>=0.28.0",
-    "build",
-    "twine",
-    "hatchling"
-]
+    "mkdocstrings[python]>=0.28.0"
+    ]
 
 [project.urls]
 Homepage = "https://github.com/co-cddo/gds-ideas-chai"
