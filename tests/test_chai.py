@@ -12,15 +12,6 @@ from chai.constants import AWSRegion, LLMModel
 
 
 @pytest.fixture
-def mock_image_handler():
-    with patch("chai.chAI.ImageHandler") as mock:
-        handler_instance = Mock()
-        handler_instance.image_request.return_value = "Image prompt"
-        mock.return_value = handler_instance
-        yield mock
-
-
-@pytest.fixture
 def mock_config():
     """Mock Config class"""
     with patch("chai.chAI.Config") as mock:
