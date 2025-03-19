@@ -1,10 +1,3 @@
-from langchain.tools import Tool
-import plotly.graph_objects as go
-import plotly.express as px
-import pandas as pd
-import numpy as np
-
-
 class PlotlyDefaultCharts:
     """Collection of default Plotly chart templates"""
 
@@ -288,16 +281,16 @@ class PlotlyTemplates:
         Here are reference templates for creating professional Plotly visualisations:
 
         # Bar Chart Template:
-        {templates['bar_chart']}
+        {templates["bar_chart"]}
 
         # Histogram Template:
-        {templates['histogram']}
+        {templates["histogram"]}
 
         # Scatter Plot Template:
-        {templates['scatter_plot']}
+        {templates["scatter_plot"]}
 
         # Line Chart Template:
-        {templates['line_chart']}
+        {templates["line_chart"]}
 
         Use these templates as references for styling and structure when creating visualisations from scratch where you have not already analysed 
         the details of an input image.

@@ -1,14 +1,15 @@
-from typing import Dict, Any, List, Union, Optional
-import logging
+import base64
 import json
-import pandas as pd
+import logging
 from datetime import datetime
 from json import JSONEncoder
-import base64
 from pathlib import Path
-from .constants import DataFrameLimits, APIVersion, MaxTokens
+from typing import Any, Dict, List, Optional, Union
+
+import pandas as pd
+
+from .constants import APIVersion, ChartType, DataFrameLimits, MaxTokens
 from .tools.default_charts import PlotlyTemplates
-from .constants import ChartType
 
 logger = logging.getLogger(__name__)
 
@@ -120,10 +121,10 @@ class DataFrameHandler:
 
         dataframe_prompt = f"""
             DataFrame Information:
-            Shape: {data_info['shape']['rows']} rows, {data_info['shape']['columns']} columns
+            Shape: {data_info["shape"]["rows"]} rows, {data_info["shape"]["columns"]} columns
             
             Columns:
-            {', '.join(col['name'] for col in data_info['columns'])}
+            {", ".join(col["name"] for col in data_info["columns"])}
             
             Sample Data:
             {sample_data_json}
