@@ -14,20 +14,6 @@ class ConfigurationError(Exception):
     pass
 
 
-# Adding helper function so we can test this with pytest
-def get_env_var(var_name: str) -> Optional[str]:
-    """
-    Helper function to get environment variables.
-
-    Args:
-        var_name (str): Name of the environment variable to retrieve.
-
-    Returns:
-        Optional[str]: Value of the environment variable or None if not found.
-    """
-    return os.getenv(var_name)
-
-
 def validate_aws_profile(profile: Optional[str]) -> str:
     """
     Validates AWS profile name.
@@ -146,7 +132,7 @@ class Config:
             self.AWS_PROFILE = validate_aws_profile(aws_profile)
             user_specified.append(f"AWS_PROFILE: {self.AWS_PROFILE}")
         else:
-            self.AWS_PROFILE = validate_aws_profile(get_env_var("AWS_PROFILE"))
+            self.AWS_PROFILE = validate_aws_profile(os.getenv("AWS_PROFILE"))
             env_specified.append(f"AWS_PROFILE: {self.AWS_PROFILE}")
 
         # Process llm_region
@@ -154,7 +140,7 @@ class Config:
             self.LLM_REGION = validate_llm_region(llm_region)
             user_specified.append(f"LLM_REGION: {self.LLM_REGION.value}")
         else:
-            self.LLM_REGION = validate_llm_region(get_env_var("LLM_REGION"))
+            self.LLM_REGION = validate_llm_region(os.getenv("LLM_REGION"))
             env_specified.append(f"LLM_REGION: {self.LLM_REGION.value}")
 
         # Process llm_model
@@ -162,7 +148,7 @@ class Config:
             self.LLM_MODEL = validate_llm_model(llm_model)
             user_specified.append(f"LLM_MODEL: {self.LLM_MODEL.name}")
         else:
-            self.LLM_MODEL = validate_llm_model(get_env_var("LLM_MODEL"))
+            self.LLM_MODEL = validate_llm_model(os.getenv("LLM_MODEL"))
             env_specified.append(f"LLM_MODEL: {self.LLM_MODEL.name}")
 
         # Log the sources of configuration values
