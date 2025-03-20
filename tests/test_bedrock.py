@@ -98,7 +98,7 @@ def test_runtime_client_creation_successful(bedrock_handler):
 
 def test_runtime_client_creation_failure(bedrock_handler):
     """Test handling of runtime client creation failure"""
-    with patch("src.chai.bedrock.boto3.Session") as mock_session:
+    with patch("chai.bedrock.boto3.Session") as mock_session:
         mock_session.side_effect = ClientError(
             error_response={"Error": {"Code": "InvalidProfile"}},
             operation_name="CreateClient",
@@ -134,9 +134,7 @@ def test_llm_creation_successful(bedrock_handler):
     bedrock_handler._runtime = mock_runtime
     mock_llm = Mock()
 
-    with patch(
-        "src.chai.bedrock.ChatBedrock", return_value=mock_llm
-    ) as mock_chat_bedrock:
+    with patch("chai.bedrock.ChatBedrock", return_value=mock_llm) as mock_chat_bedrock:
         llm = bedrock_handler.get_llm()
 
         assert llm == mock_llm
@@ -149,7 +147,7 @@ def test_llm_creation_successful(bedrock_handler):
 
 def test_runtime_client_creation_error(bedrock_handler):
     """Test handling of runtime client creation failure"""
-    with patch("src.chai.bedrock.boto3.Session") as mock_session:
+    with patch("chai.bedrock.boto3.Session") as mock_session:
         mock_session.side_effect = ClientError(
             error_response={"Error": {"Code": "InvalidProfile"}},
             operation_name="CreateClient",
@@ -168,9 +166,7 @@ def test_llm_caching(bedrock_handler):
 
     # We need to patch both the ChatBedrock and boto3.Session
     with (
-        patch(
-            "src.chai.bedrock.ChatBedrock", return_value=mock_llm
-        ) as mock_chat_bedrock,
+        patch("chai.bedrock.ChatBedrock", return_value=mock_llm) as mock_chat_bedrock,
         patch("boto3.Session") as mock_session_class,
     ):
         # Set up the mock session
