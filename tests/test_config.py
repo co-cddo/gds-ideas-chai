@@ -1,17 +1,15 @@
 import os
-import sys
 
 import pytest
 
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from src.chai.config import (
+from chai.config import (
     Config,
     ConfigurationError,
     validate_aws_profile,
     validate_llm_model,
     validate_llm_region,
 )
-from src.chai.constants import AWSRegion, LLMModel
+from chai.constants import AWSRegion, LLMModel
 
 
 @pytest.fixture(autouse=True)

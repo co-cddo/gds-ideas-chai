@@ -1,14 +1,11 @@
-import os
-import sys
 from unittest.mock import Mock, patch
 
 import pytest
 from botocore.exceptions import ClientError
 
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from src.chai.bedrock import BedrockHandler, BedrockHandlerError
-from src.chai.config import Config, ConfigurationError
-from src.chai.constants import AWSRegion, LLMModel
+from chai.bedrock import BedrockHandler, BedrockHandlerError
+from chai.config import Config, ConfigurationError
+from chai.constants import AWSRegion, LLMModel
 
 
 @pytest.fixture
