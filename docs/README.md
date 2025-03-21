@@ -28,9 +28,7 @@ chAI comes with 3 LLM models for selection by default - please note the capabili
 - Claude 3.5 Sonnet: Claude 3.5 Sonnet in addition to code completion is well suited to image analysis, particularly visual reasoning and interpreting charts and graphs, and can accurately transcribe text from imperfect images.
 - Claude 3.7 Sonnet: Claude 3.7 Sonnet takes the capabilities of 3.5 further by combining the ordinary LLM with a reasoning model and is generally an upgraded version of Claude 3.5.
 
-
-
-### Option 1: Specifying Parameters Directly
+### Configuration
 You can provide configuration parameters explicitly when initializing the chAI object. For convenience, we've defined Enum values in the AWSRegion and LLMModel classes that represent commonly used AWS regions and Claude model variants suitable for chAI:
 
 ```
