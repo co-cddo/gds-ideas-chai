@@ -59,7 +59,7 @@ response = chai.steep(
     data=sample_df,
     prompt=prompt,
 )
-print(response.teapot.suggestions)
+print(response.suggestions)
 ```
 ![Visuals Ideas Example](img/visual_ideas.png)
 
@@ -88,9 +88,9 @@ prompt = """
     Please provide your analysis in clear, business-friendly language suitable for stakeholders.
     """
 image_analysis = chai.steep(prompt=prompt, image_path="../tests/img/satisfaction.png")
-print(image_analysis.teapot.analysis) # Access the analysis
-print(image_analysis.teapot.code) # View the generated Plotly code
-print(image_analysis.teapot.path) # View the path to the locally generated chart
+print(image_analysis.analysis) # Access the analysis
+print(image_analysis.code) # View the generated Plotly code
+print(image_analysis.path) # View the path to the locally generated chart
 ```
 ![Analysis and Code Example](img/analysis_code.png)
 
@@ -107,7 +107,7 @@ chAI can take user prompts to design a specified chart and provide required plot
 # Example Code
 chart_prompt = "I want a red chart with bold axis titles and labels on the bars. There should also be a legend showing each distinct category"
 chart_generation = chai.steep(prompt=chart_prompt, chart_type="scatter")
-print(chart_generation.teapot.code) # View the generated Plotly code
+print(chart_generation.code) # View the generated Plotly code
 ```
 ![Scatter Chart Example](img/request_scatter.png)
 
