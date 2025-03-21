@@ -1,10 +1,12 @@
-from typing import Optional
 import logging
+from typing import Optional
+
 import boto3
 from botocore.exceptions import ClientError
 from langchain_aws import ChatBedrock
-from .constants import AWSRegion, LLMModel
+
 from .config import Config, ConfigurationError
+from .constants import AWSRegion, LLMModel
 
 logger = logging.getLogger(__name__)
 
@@ -18,7 +20,7 @@ class BedrockHandlerError(Exception):
 class BedrockHandler:
     def __init__(self, config: Config):
         """
-        Initialize BedrockHandler with configuration.
+        Initialise BedrockHandler with configuration.
 
         Args:
             config (Config): Configuration object containing AWS settings
@@ -26,11 +28,16 @@ class BedrockHandler:
         Raises:
             ConfigurationError: If configuration is invalid
         """
-        logger.info("Initializing BedrockHandler")
+        logger.info("Initialising BedrockHandler")
         self.region: AWSRegion = config.LLM_REGION
         self.model_id: LLMModel = config.LLM_MODEL
         self.profile: str = config.AWS_PROFILE
         self._validate_config()
+
+        # Create a single session to be reused across all of chAI
+        self.session = boto3.Session(profile_name=self.profile)
+
+        # These are necessary for instance-level caching, ensures subsequent calls are returned directly.
         self._runtime: Optional[boto3.client] = None
         self._llm: Optional[ChatBedrock] = None
 
@@ -100,9 +107,12 @@ class BedrockHandler:
             BedrockHandlerError: If creation fails
         """
         logger.info("Creating ChatBedrock LLM instance")
+        runtime = self.runtime_client
         try:
             llm = ChatBedrock(
-                model_id=self.model_id.value, region_name=self.region.value
+                model_id=self.model_id.value,
+                client=runtime,
+                region_name=self.region.value,
             )
             logger.info("Successfully created ChatBedrock LLM instance")
             return llm

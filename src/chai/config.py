@@ -1,9 +1,9 @@
 import logging
 import os
-import json
-from dataclasses import dataclass, field
-from typing import Any, Dict, List, Literal, Optional
-from .constants import LLMModel, AWSRegion
+from dataclasses import dataclass
+from typing import Optional
+
+from .constants import AWSRegion, LLMModel
 
 logger = logging.getLogger(__name__)
 
@@ -12,20 +12,6 @@ class ConfigurationError(Exception):
     """Raised when there's an error in the configuration"""
 
     pass
-
-
-# Adding helper function so we can test this with pytest
-def get_env_var(var_name: str) -> Optional[str]:
-    """
-    Helper function to get environment variables.
-
-    Args:
-        var_name (str): Name of the environment variable to retrieve.
-
-    Returns:
-        Optional[str]: Value of the environment variable or None if not found.
-    """
-    return os.getenv(var_name)
 
 
 def validate_aws_profile(profile: Optional[str]) -> str:
@@ -119,29 +105,61 @@ class Config:
         LLM_MODEL (LLMModel): LLM model identifier
     """
 
-    AWS_PROFILE: str = field(
-        default_factory=lambda: validate_aws_profile(get_env_var("AWS_PROFILE"))
-    )
-    LLM_REGION: AWSRegion = field(
-        default_factory=lambda: validate_llm_region(get_env_var("LLM_REGION"))
-    )
-    LLM_MODEL: LLMModel = field(
-        default_factory=lambda: validate_llm_model(get_env_var("LLM_MODEL"))
-    )
+    AWS_PROFILE: str
+    LLM_REGION: AWSRegion
+    LLM_MODEL: LLMModel
 
-    def __post_init__(self):
+    def __init__(
+        self,
+        aws_profile: Optional[str] = None,
+        llm_region: Optional[str] = None,
+        llm_model: Optional[str] = None,
+    ):
         """
-        Validates the configuration after initialisation.
+        Initialize Config with optional direct values.
 
-        Raises:
-            ConfigurationError: If any required fields are missing or invalid.
+        Args:
+            aws_profile: Optional AWS profile name. If provided, overrides environment variable.
+            llm_region: Optional LLM region. If provided, overrides environment variable.
+            llm_model: Optional LLM model. If provided, overrides environment variable.
         """
-        try:
-            self.validate()
-            logger.info("Loaded config for agent successfully.")
-        except Exception as e:
-            logger.error(f"Configuration error: {str(e)}")
-            raise
+        # Create some placeholders here so depending on how user has configured their system, tells where variables are coming from
+        user_specified = []
+        env_specified = []
+
+        # Process aws_profile
+        if aws_profile:
+            self.AWS_PROFILE = validate_aws_profile(aws_profile)
+            user_specified.append(f"AWS_PROFILE: {self.AWS_PROFILE}")
+        else:
+            self.AWS_PROFILE = validate_aws_profile(os.getenv("AWS_PROFILE"))
+            env_specified.append(f"AWS_PROFILE: {self.AWS_PROFILE}")
+
+        # Process llm_region
+        if llm_region:
+            self.LLM_REGION = validate_llm_region(llm_region)
+            user_specified.append(f"LLM_REGION: {self.LLM_REGION.value}")
+        else:
+            self.LLM_REGION = validate_llm_region(os.getenv("LLM_REGION"))
+            env_specified.append(f"LLM_REGION: {self.LLM_REGION.value}")
+
+        # Process llm_model
+        if llm_model:
+            self.LLM_MODEL = validate_llm_model(llm_model)
+            user_specified.append(f"LLM_MODEL: {self.LLM_MODEL.name}")
+        else:
+            self.LLM_MODEL = validate_llm_model(os.getenv("LLM_MODEL"))
+            env_specified.append(f"LLM_MODEL: {self.LLM_MODEL.name}")
+
+        # Log the sources of configuration values
+        if user_specified:
+            logger.info(f"Using user-specified variables: {', '.join(user_specified)}")
+        if env_specified:
+            logger.info(f"Using .env variables: {', '.join(env_specified)}")
+
+        # Validate the configuration
+        self.validate()
+        logger.info("Loaded config for agent successfully.")
 
     def validate(self) -> None:
         """
@@ -165,5 +183,3 @@ class Config:
             raise ConfigurationError(
                 f"Invalid configuration for fields: {missing_fields}"
             )
-
-        logger.info("Loaded config for agent successfully.")

@@ -1,16 +1,15 @@
-from enum import Enum, auto
+from enum import Enum
 
 
 class LLMModel(str, Enum):
-    CLAUDE_V2_1 = "anthropic.claude-v2:1"
-    CLAUDE_SONNET_3_5 = "anthropic.claude-3-5-sonnet-20240620-v1:0"
     CLAUDE_HAIKU_3_5 = "anthropic.claude-3-5-haiku-20241022-v1:0"
+    CLAUDE_SONNET_3_5 = "anthropic.claude-3-5-sonnet-20240620-v1:0"
+    CLAUDE_SONNET_3_7 = "anthropic.claude-3-7-sonnet-20250219-v1:0"
 
 
 class AWSRegion(str, Enum):
     US_EAST_1 = "us-east-1"
     US_WEST_2 = "us-west-2"
-    EU_WEST_1 = "eu-west-1"
 
 
 class ChartType(str, Enum):

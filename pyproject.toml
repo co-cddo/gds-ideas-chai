@@ -10,13 +10,13 @@ authors = [
 ]
 description = "An LLM powered charting package"
 readme = "docs/README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.13"
 license = {text = "MIT"}
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Education",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.13",
     "Operating System :: OS Independent",
     "Topic :: Scientific/Engineering :: Visualization",
     "License :: OSI Approved :: MIT License",
@@ -38,25 +38,25 @@ dependencies = [
     "python-dotenv>=1.0.1",
 ]
 
-[project.optional-dependencies]
-test = [
-    "pytest",
-    "pytest-cov>=6.0.0",
-]
+[dependency-groups]
 dev = [
     "black",
+    "build",
+    "twine",
+    "hatchling",
+    "pytest>=8.3.5",
+    "pytest-cov>=6.0.0",
+]
+docs = [
     "mkdocs",
     "mkdocs-material",
     "mkdocs-glightbox",
-    "mkdocstrings[python]>=0.28.0",
-    "build",
-    "twine",
-    "hatchling"
-]
+    "mkdocstrings[python]>=0.28.0"
+    ]
 
 [project.urls]
-Homepage = "https://github.com/co-cddo/gds-idea-chai"
-"Bug Tracker" = "https://github.com/co-cddo/gds-idea-chai/issues"
+Homepage = "https://github.com/co-cddo/gds-ideas-chai"
+"Bug Tracker" = "https://github.com/co-cddo/gds-ideas-chai/issues"
 
 [tool.hatch.build]
 packages = ["src/chai"]

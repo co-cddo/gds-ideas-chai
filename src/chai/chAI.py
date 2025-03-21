@@ -1,17 +1,11 @@
 # Import base requirements for data handling and AWS
 import json
 import logging
-import os
-import time
-from dataclasses import dataclass
-from datetime import datetime
-from typing import Union, Optional, Any, Dict, List
-from uuid import uuid4
-import boto3
-from dotenv import load_dotenv
+import warnings
 from pathlib import Path
+from typing import Any, Dict, Optional, Union
+
 import pandas as pd
-import base64
 
 # Import agent dependencies
 from langchain import hub
@@ -19,23 +13,28 @@ from langchain.agents import (
     AgentExecutor,
     create_json_chat_agent,
 )
+from pydantic import BaseModel, Field
+
+from .bedrock import BedrockHandler
 
 # Import custom classes and tools
 from .config import Config
-from .bedrock import BedrockHandler
-from .tools import (
-    create_formatting_tool,
-    create_analysis_formatter_tool,
-    create_save_plotly_tool,
-)
-from .constants import (
-    LLMModel,
-    AWSRegion,
-)
+from .constants import ChartType
 from .requests import (
     DataFrameHandler,
     ImageHandler,
     TypeHandler,
+)
+from .tools import (
+    create_analysis_formatter_tool,
+    create_formatting_tool,
+    create_save_plotly_tool,
+)
+
+warnings.filterwarnings(
+    "ignore",
+    category=UserWarning,
+    message=".*API key must be provided when using hosted LangSmith API.*",
 )
 
 logger = logging.getLogger(__name__)
@@ -47,23 +46,62 @@ class ChAIError(Exception):
     pass
 
 
+class ChAITeapot(BaseModel):
+    """
+    Pydantic model for the teapot component of ChAI responses.
+    Different fields will be populated based on the request type.
+    """
+
+    # Raw response text (private)
+    raw_text: str = Field(alias="raw_text")
+
+    # Fields for all visualisation suggestions from dataset_requests
+    suggestions: Optional[str] = None
+
+    # Fields for image_request and chart_request
+    analysis: Optional[str] = None
+    code: Optional[str] = None
+    path: Optional[str] = None
+
+    class Config:
+        arbitrary_types_allowed = True
+        allow_population_by_field_name = True
+
+    def __str__(self) -> str:
+        """Return the raw text when the object is printed"""
+        return self.raw_text
+
+
 class chAI:
-    def __init__(self):
+    def __init__(
+        self,
+        aws_profile: Optional[str] = None,
+        llm_region: Optional[str] = None,
+        llm_model: Optional[str] = None,
+    ):
         """
         Initialises the chAI class with required configurations and tools.
 
+        Args:
+            aws_profile: Optional AWS profile name. If provided, overrides environment variable.
+            llm_region: Optional LLM region. If provided, overrides environment variable.
+            llm_model: Optional LLM model. If provided, overrides environment variable.
+
         Notes:
-            - Sets up configuration using Config class
-            - Initialises Bedrock handler and runtime
+            - AWS profile is loaded from environment variables via Config class
+            - Sets up Bedrock handler and runtime
             - Loads LLM model and prompt
-            - Sets up visuasation tools and templates
+            - Sets up visualization tools and templates
             - Creates agent executor
         """
         logger.info("chAI Start")
-        self.config = Config()
+
+        self.config = Config(
+            aws_profile=aws_profile, llm_region=llm_region, llm_model=llm_model
+        )
         self.bedrock = BedrockHandler(self.config)
-        self.bedrock_runtime = self.bedrock.set_runtime()
-        self.llm = self.bedrock.get_llm()
+        self.bedrock_runtime = self.bedrock.runtime_client
+        self.llm = self.bedrock.llm
         self.prompt = hub.pull("hwchase17/react-chat-json")
 
         # Initialise handlers
@@ -110,14 +148,14 @@ class chAI:
             logger.error(f"Error setting up chAI agent: {str(e)}")
             raise
 
-    def handle_request(
+    def steep(
         self,
         data: Optional[pd.DataFrame] = None,
         prompt: Optional[str] = None,
         image_path: Optional[Union[str, Path]] = None,
-        chart_type: Optional[str] = None,
+        chart_type: Optional[ChartType] = None,
         **kwargs: Any,
-    ) -> Dict[str, Any]:
+    ) -> ChAITeapot:
         """
         Processes user requests based on input type and generates appropriate visualisations.
 
@@ -129,13 +167,16 @@ class chAI:
             **kwargs (Any): Additional keyword arguments for the LLM.
 
         Returns:
-            Dict[str, Any]: Agent response containing 1 or more of:
-                - Analysis results
-                - Generated visualisations plotly code
-                - Output file paths
+            ChAITeapot: A response object that:
+                - Can be printed as a string to show the full response
+                - Has structured components directly accessible:
+                    - For DataFrame and visualisation requests: .suggestions
+                    - For image requests: .analysis, .code, .path
+                    - For chart requests: .code, .path
 
         Raises:
-        ChAIError: If there's an error processing the request.
+            ChAIError: If there's an error processing the request.
+            ValueError: If no valid input is provided.
 
         Notes:
             - Handles different input types (DataFrame, image, chart type)
@@ -152,6 +193,7 @@ class chAI:
         if isinstance(data, pd.DataFrame):
             logger.info("Detected DataFrame input. Preparing to analyse...")
             final_prompt = self.dataframe_handler.dataframe_request(data, base_prompt)
+            request_type = "dataframe"
 
         elif isinstance(image_path, str):
             logger.info("Detected image location input. Preparing to review...")
@@ -161,12 +203,14 @@ class chAI:
                 model_id=self.config.LLM_MODEL.value,
                 custom_prompt=prompt,
             )
+            request_type = "image"
 
         elif chart_type:
             logger.info(f"Processing chart type request: {chart_type}")
             final_prompt = self.type_handler.chart_request(
                 chart_type=chart_type, custom_prompt=prompt
             )
+            request_type = "chart"
 
         else:
             raise ValueError("No valid input provided")
@@ -175,7 +219,87 @@ class chAI:
         try:
             logger.info("Sending prompt and data to agent executor...")
             response = self.agent_executor.invoke({"input": final_prompt})
-            return response["output"]
+            raw_output = response["output"]
+
+            # Process the output based on the request type
+            teapot_data = self._process_output(raw_output, request_type)
+
+            # Create and return the response object
+            raw_text = (
+                json.dumps(raw_output) if isinstance(raw_output, dict) else raw_output
+            )
+            return ChAITeapot(raw_text=raw_text, **teapot_data)
         except Exception as e:
-            logger.error(f"Error in handle_request: {str(e)}")
+            logger.error(f"Error in steep: {str(e)}")
             raise ChAIError(f"Failed to process request: {e}")
+
+    def _process_output(self, raw_output: Any, request_type: str) -> Dict[str, Any]:
+        """
+        Process the raw output based on the request type and extract structured components.
+
+        This method parses the agent's response according to the request type and
+        extracts relevant components into a dictionary structure that matches the ChAITeapot model.
+
+        Args:
+            raw_output (Any): Raw output from the agent, can be string or dictionary
+            request_type (str): Type of request ("dataframe", "image", or "chart")
+
+        Returns:
+            Dict[str, Any]: Dictionary with extracted components based on request type:
+                - For DataFrame requests: {"suggestions": str}
+                - For image requests: {"analysis": str, "code": str, "path": str}
+                - For chart requests: {"code": str, "path": str}
+        """
+        result = {}
+
+        if request_type == "dataframe":
+            # For DataFrame requests, use raw output as suggestions
+            result["suggestions"] = raw_output
+
+        elif request_type == "image":
+            # For image requests, the output should be a JSON dictionary
+            if isinstance(raw_output, dict):
+                # If it's already a dictionary, use it directly
+                if "analysis" in raw_output:
+                    result["analysis"] = raw_output["analysis"]
+                if "code" in raw_output:
+                    result["code"] = raw_output["code"]
+                if "path" in raw_output:
+                    result["path"] = raw_output["path"]
+            else:
+                # If not a dictionary, try parsing as JSON
+                try:
+                    json_data = json.loads(raw_output)
+                    if "analysis" in json_data:
+                        result["analysis"] = json_data["analysis"]
+                    if "code" in json_data:
+                        result["code"] = json_data["code"]
+                    if "path" in json_data:
+                        result["path"] = json_data["path"]
+                except (json.JSONDecodeError, TypeError):
+                    logger.warning("Image response was not valid JSON")
+                    # If not JSON, use raw output as analysis
+                    result["analysis"] = raw_output
+
+        elif request_type == "chart":
+            # For chart requests, the output should be a JSON dictionary
+            if isinstance(raw_output, dict):
+                # Map JSON keys directly to result
+                if "code" in raw_output:
+                    result["code"] = raw_output["code"]
+                if "path" in raw_output:
+                    result["path"] = raw_output["path"]
+            else:
+                try:
+                    json_data = json.loads(raw_output)
+                    # Map JSON keys directly to result
+                    if "code" in json_data:
+                        result["code"] = json_data["code"]
+                    if "path" in json_data:
+                        result["path"] = json_data["path"]
+                except (json.JSONDecodeError, TypeError):
+                    logger.warning("Chart response was not valid JSON")
+                    # If not JSON, use raw output as code
+                    result["code"] = raw_output
+
+        return result

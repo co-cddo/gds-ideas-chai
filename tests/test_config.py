@@ -1,17 +1,15 @@
-import pytest
-from unittest.mock import patch
 import os
-import sys
 
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from src.chai.config import (
+import pytest
+
+from chai.config import (
     Config,
     ConfigurationError,
     validate_aws_profile,
-    validate_llm_region,
     validate_llm_model,
+    validate_llm_region,
 )
-from src.chai.constants import AWSRegion, LLMModel
+from chai.constants import AWSRegion, LLMModel
 
 
 @pytest.fixture(autouse=True)
@@ -53,7 +51,10 @@ def test_validate_llm_region():
 def test_validate_llm_model():
     """Test LLM model validation"""
     # Test valid models
-    assert validate_llm_model("anthropic.claude-v2:1") == LLMModel.CLAUDE_V2_1
+    assert (
+        validate_llm_model("anthropic.claude-3-5-sonnet-20240620-v1:0")
+        == LLMModel.CLAUDE_SONNET_3_5
+    )
 
     # Test invalid models
     with pytest.raises(ConfigurationError, match="LLM_MODEL cannot be None or empty"):
@@ -70,33 +71,36 @@ def test_config_successful_initialization(mock_env):
         {
             "AWS_PROFILE": "test-profile",
             "LLM_REGION": "us-west-2",
-            "LLM_MODEL": "anthropic.claude-v2:1",
+            "LLM_MODEL": "anthropic.claude-3-5-sonnet-20240620-v1:0",
         }
     )
 
     config = Config()
     assert config.AWS_PROFILE == "test-profile"
     assert config.LLM_REGION == AWSRegion.US_WEST_2
-    assert config.LLM_MODEL == LLMModel.CLAUDE_V2_1
+    assert config.LLM_MODEL == LLMModel.CLAUDE_SONNET_3_5
 
 
 def test_config_direct_assignment():
     """Test successful initialization with direct assignment"""
     config = Config(
-        AWS_PROFILE="direct-profile",
-        LLM_REGION=AWSRegion.EU_WEST_1,
-        LLM_MODEL=LLMModel.CLAUDE_V2_1,
+        aws_profile="direct-profile",
+        llm_region="us-east-1",
+        llm_model="anthropic.claude-3-5-sonnet-20240620-v1:0",
     )
     assert config.AWS_PROFILE == "direct-profile"
-    assert config.LLM_REGION == AWSRegion.EU_WEST_1
-    assert config.LLM_MODEL == LLMModel.CLAUDE_V2_1
+    assert config.LLM_REGION == AWSRegion.US_EAST_1
+    assert config.LLM_MODEL == LLMModel.CLAUDE_SONNET_3_5
 
 
 @pytest.mark.parametrize(
     "env_vars,expected_error",
     [
         (
-            {"AWS_PROFILE": "test", "LLM_MODEL": "anthropic.claude-v2:1"},
+            {
+                "AWS_PROFILE": "test",
+                "LLM_MODEL": "anthropic.claude-3-5-sonnet-20240620-v1:0",
+            },
             "LLM_REGION cannot be None or empty",
         ),
         ({"AWS_PROFILE": "test"}, "LLM_REGION cannot be None or empty"),
@@ -104,7 +108,7 @@ def test_config_direct_assignment():
             {
                 "AWS_PROFILE": "test",
                 "LLM_REGION": "invalid-region",
-                "LLM_MODEL": "anthropic.claude-v2:1",
+                "LLM_MODEL": "anthropic.claude-3-5-sonnet-20240620-v1:0",
             },
             "Invalid region",
         ),
@@ -130,9 +134,9 @@ def test_invalid_type_assignment():
     """Test assignment of invalid types"""
     with pytest.raises(ConfigurationError):
         Config(
-            AWS_PROFILE=123,  # Should be string
-            LLM_REGION=AWSRegion.US_WEST_2,
-            LLM_MODEL=LLMModel.CLAUDE_V2_1,
+            aws_profile=123,
+            llm_region="us-west-2",
+            llm_model="anthropic.claude-3-5-sonnet-20240620-v1:0",
         )
 
 
