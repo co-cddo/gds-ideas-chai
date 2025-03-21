@@ -51,7 +51,10 @@ def test_validate_llm_region():
 def test_validate_llm_model():
     """Test LLM model validation"""
     # Test valid models
-    assert validate_llm_model("anthropic.claude-v2:1") == LLMModel.CLAUDE_V2_1
+    assert (
+        validate_llm_model("anthropic.claude-3-5-sonnet-20240620-v1:0")
+        == LLMModel.CLAUDE_SONNET_3_5
+    )
 
     # Test invalid models
     with pytest.raises(ConfigurationError, match="LLM_MODEL cannot be None or empty"):
@@ -68,14 +71,14 @@ def test_config_successful_initialization(mock_env):
         {
             "AWS_PROFILE": "test-profile",
             "LLM_REGION": "us-west-2",
-            "LLM_MODEL": "anthropic.claude-v2:1",
+            "LLM_MODEL": "anthropic.claude-v3:5",
         }
     )
 
     config = Config()
     assert config.AWS_PROFILE == "test-profile"
     assert config.LLM_REGION == AWSRegion.US_WEST_2
-    assert config.LLM_MODEL == LLMModel.CLAUDE_V2_1
+    assert config.LLM_MODEL == LLMModel.CLAUDE_SONNET_3_5
 
 
 def test_config_direct_assignment():
@@ -83,18 +86,21 @@ def test_config_direct_assignment():
     config = Config(
         aws_profile="direct-profile",
         llm_region="eu-west-1",
-        llm_model="anthropic.claude-v2:1",
+        llm_model="anthropic.claude-3-5-sonnet-20240620-v1:0",
     )
     assert config.AWS_PROFILE == "direct-profile"
     assert config.LLM_REGION == AWSRegion.EU_WEST_1
-    assert config.LLM_MODEL == LLMModel.CLAUDE_V2_1
+    assert config.LLM_MODEL == LLMModel.CLAUDE_SONNET_3_5
 
 
 @pytest.mark.parametrize(
     "env_vars,expected_error",
     [
         (
-            {"AWS_PROFILE": "test", "LLM_MODEL": "anthropic.claude-v2:1"},
+            {
+                "AWS_PROFILE": "test",
+                "LLM_MODEL": "anthropic.claude-3-5-sonnet-20240620-v1:0",
+            },
             "LLM_REGION cannot be None or empty",
         ),
         ({"AWS_PROFILE": "test"}, "LLM_REGION cannot be None or empty"),
@@ -102,7 +108,7 @@ def test_config_direct_assignment():
             {
                 "AWS_PROFILE": "test",
                 "LLM_REGION": "invalid-region",
-                "LLM_MODEL": "anthropic.claude-v2:1",
+                "LLM_MODEL": "anthropic.claude-3-5-sonnet-20240620-v1:0",
             },
             "Invalid region",
         ),
@@ -130,7 +136,7 @@ def test_invalid_type_assignment():
         Config(
             aws_profile=123,
             llm_region="us-west-2",
-            llm_model="anthropic.claude-v2:1",
+            llm_model="anthropic.claude-3-5-sonnet-20240620-v1:0",
         )
 
 
