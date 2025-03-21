@@ -85,7 +85,7 @@ def test_config_direct_assignment():
     """Test successful initialization with direct assignment"""
     config = Config(
         aws_profile="direct-profile",
-        llm_region="eu-west-1",
+        llm_region="us-east-1",
         llm_model="anthropic.claude-3-5-sonnet-20240620-v1:0",
     )
     assert config.AWS_PROFILE == "direct-profile"
