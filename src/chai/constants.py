@@ -11,7 +11,6 @@ class LLMModel(str, Enum):
 class AWSRegion(str, Enum):
     US_EAST_1 = "us-east-1"
     US_WEST_2 = "us-west-2"
-    EU_WEST_1 = "eu-west-1"
 
 
 class ChartType(str, Enum):
