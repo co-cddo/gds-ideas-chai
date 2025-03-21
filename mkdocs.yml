@@ -1,4 +1,5 @@
 site_name: chAI
+site_url: https://co-cddo.github.io/gds-ideas-chai/
 theme: 
   name: material
   palette:
