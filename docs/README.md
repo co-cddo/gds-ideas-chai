@@ -7,7 +7,7 @@ Currently the library has only been tested with compatible Anthropic models. See
 
 
 ## Prerequisites
-- An environment with Python 3.11 or greater
+- An environment with Python 3.13 or greater
 - Foundation model access approved within AWS for models referenced in constants.py
 - OPTIONAL: A .env file with an entry for AWS_PROFILE=. This profile/user should have sufficient permissions to execute a API calls without requiring MFA authentication in e.g. a notebook. Alternatively, users can configure the chAI runtime at initialisation.
 
@@ -22,24 +22,37 @@ To use chAI:
 You can now use chAI in your python notebook!
 
 ## Usage
-chAI comes with 3 LLM requests by default. To initialise chAI you can either set up a .env file with the following variables:
+chAI comes with 3 LLM models for selection by default - please note the capabilities of each one when deciding which is most appropriate for your use case:
+
+- Claude 3.5 Haiku: Claude 3.5 Haiku offers quick code suggestions and completions to accelerate development workflows.
+- Claude 3.5 Sonnet: Claude 3.5 Sonnet in addition to code completion is well suited to image analysis, particularly visual reasoning and interpreting charts and graphs, and can accurately transcribe text from imperfect images.
+- Claude 3.7 Sonnet: Claude 3.7 Sonnet takes the capabilities of 3.5 further by combining the ordinary LLM with a reasoning model and is generally an upgraded version of Claude 3.5.
+
+
+
+### Option 1: Specifying Parameters Directly
+You can provide configuration parameters explicitly when initializing the chAI object. For convenience, we've defined Enum values in the AWSRegion and LLMModel classes that represent commonly used AWS regions and Claude model variants suitable for chAI:
+
+```
+from chai import chAI
+from chai.constants import AWSRegion, LLMModel
+
+chai = chAI(
+    aws_profile="your-aws-profile",
+    llm_region=AWSRegion.US_EAST_1,
+    llm_model=LLMModel.CLAUDE_SONNET_3_7,
+)
+```
+
+Alternatively, you can initialise chAI with an .env file with the following variables if you wish to avoid sharing credentials information in your code:
 - AWS_PROFILE=your-aws-profile
-- LLM_REGION=your-aws-region
-- LLM_MODEL=your-chosen-model
+- LLM_REGION=your-aws-region (you can use the Enum here)
+- LLM_MODEL=your-chosen-model (you can use the Enum here)
 
 and then run:
 ```
 from chai import chAI
 chai = chAI()
-```
-
-Alternatively for more flexibility, you can provide the variables yourself:
-```
-chai = chAI(
-    aws_profile="your-aws-profile", 
-    llm_region="us-east-1", 
-    llm_model="CLAUDE_SONNET_3_5"
-)
 ```
 
 Refer to the chAI_functionality_examples.ipynb notebook to see the workflows in action. A sample input chart is provided for you to experiment with.
@@ -96,16 +109,16 @@ print(image_analysis.path) # View the path to the locally generated chart
 
 ### Chart Template Generation
 chAI has plotly code for several chart templates in its backend:
-- Bar
-- Histogram
-- Scatter
-- Line
+- Bar: Set chart_type to 'bar'
+- Histogram: Set chart_type to 'histogram'
+- Scatter: Set chart_type to 'scatter'
+- Line: Set chart_type to 'line'
 
 chAI can take user prompts to design a specified chart and provide required plotly code.
 
 ```
 # Example Code
-chart_prompt = "I want a red chart with bold axis titles and labels on the bars. There should also be a legend showing each distinct category"
+chart_prompt = "I want a red chart with bold axis titles. There should also be a legend showing each distinct category"
 chart_generation = chai.steep(prompt=chart_prompt, chart_type="scatter")
 print(chart_generation.code) # View the generated Plotly code
 ```
