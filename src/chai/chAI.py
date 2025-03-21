@@ -71,38 +71,6 @@ class ChAITeapot(BaseModel):
         """Return the raw text when the object is printed"""
         return self.raw_text
 
-    # @property
-    # def raw_text(self) -> str:
-    #    """Property to access the raw text"""
-    #    return self.raw_text
-
-
-# class ChAIResponse(BaseModel):
-#    """
-#    Pydantic model for ChAI responses.
-#
-#    This model contains both the raw text response from the LLM and
-#    structured components extracted from that response in the teapot attribute.
-#    The object can be printed as a string to display the raw response.
-#
-#    Attributes:
-#        raw_text (str): Raw response text from the LLM (serialized as JSON if originally a dict)
-#        teapot (ChAITeapot): Structured response components organized by request type
-#    """
-
-#    # Raw response text
-#    raw_text: str
-
-#    # Structured response components
-#    teapot: ChAITeapot = Field(default_factory=ChAITeapot)
-
-#    class Config:
-#        arbitrary_types_allowed = True
-
-#    def __str__(self) -> str:
-#        """Return the raw text when the object is printed"""
-#       return self.raw_text
-
 
 class chAI:
     def __init__(

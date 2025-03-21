@@ -1,11 +1,8 @@
-import os
-import sys
 from unittest.mock import Mock, patch
 
 import pandas as pd
 import pytest
 
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from chai.chAI import ChAIError, chAI
 from chai.config import Config
 from chai.constants import AWSRegion, LLMModel
@@ -134,7 +131,7 @@ def test_steep_dataframe(chai_instance, mock_dataframe_handler):
 
     # Check that we got a ChAIResponse object
     assert result.raw_text == "Test response"
-    assert result.teapot.suggestions == "Test response"
+    assert result.suggestions == "Test response"
 
 
 def test_steep_image(chai_instance, mock_image_handler, tmp_path):
@@ -150,7 +147,7 @@ def test_steep_image(chai_instance, mock_image_handler, tmp_path):
 
     # Check that we got a ChAIResponse object
     assert result.raw_text == "Test response"
-    assert result.teapot.analysis == "Test response"
+    assert result.analysis == "Test response"
 
 
 def test_steep_chart_type(chai_instance, mock_type_handler):
@@ -164,7 +161,7 @@ def test_steep_chart_type(chai_instance, mock_type_handler):
 
     # Check that we got a ChAIResponse object
     assert result.raw_text == "Test response"
-    assert result.teapot.code == "Test response"
+    assert result.code == "Test response"
 
 
 def test_steep_no_input(chai_instance):
