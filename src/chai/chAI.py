@@ -52,6 +52,9 @@ class ChAITeapot(BaseModel):
     Different fields will be populated based on the request type.
     """
 
+    # Raw response text (private)
+    raw_text: str = Field(alias="raw_text")
+
     # Fields for all visualisation suggestions from dataset_requests
     suggestions: Optional[str] = None
 
@@ -60,32 +63,45 @@ class ChAITeapot(BaseModel):
     code: Optional[str] = None
     path: Optional[str] = None
 
-
-class ChAIResponse(BaseModel):
-    """
-    Pydantic model for ChAI responses.
-
-    This model contains both the raw text response from the LLM and
-    structured components extracted from that response in the teapot attribute.
-    The object can be printed as a string to display the raw response.
-
-    Attributes:
-        raw_text (str): Raw response text from the LLM (serialized as JSON if originally a dict)
-        teapot (ChAITeapot): Structured response components organized by request type
-    """
-
-    # Raw response text
-    raw_text: str
-
-    # Structured response components
-    teapot: ChAITeapot = Field(default_factory=ChAITeapot)
-
     class Config:
         arbitrary_types_allowed = True
+        allow_population_by_field_name = True
 
     def __str__(self) -> str:
         """Return the raw text when the object is printed"""
         return self.raw_text
+
+    # @property
+    # def raw_text(self) -> str:
+    #    """Property to access the raw text"""
+    #    return self.raw_text
+
+
+# class ChAIResponse(BaseModel):
+#    """
+#    Pydantic model for ChAI responses.
+#
+#    This model contains both the raw text response from the LLM and
+#    structured components extracted from that response in the teapot attribute.
+#    The object can be printed as a string to display the raw response.
+#
+#    Attributes:
+#        raw_text (str): Raw response text from the LLM (serialized as JSON if originally a dict)
+#        teapot (ChAITeapot): Structured response components organized by request type
+#    """
+
+#    # Raw response text
+#    raw_text: str
+
+#    # Structured response components
+#    teapot: ChAITeapot = Field(default_factory=ChAITeapot)
+
+#    class Config:
+#        arbitrary_types_allowed = True
+
+#    def __str__(self) -> str:
+#        """Return the raw text when the object is printed"""
+#       return self.raw_text
 
 
 class chAI:
@@ -171,7 +187,7 @@ class chAI:
         image_path: Optional[Union[str, Path]] = None,
         chart_type: Optional[ChartType] = None,
         **kwargs: Any,
-    ) -> ChAIResponse:
+    ) -> ChAITeapot:
         """
         Processes user requests based on input type and generates appropriate visualisations.
 
@@ -183,12 +199,12 @@ class chAI:
             **kwargs (Any): Additional keyword arguments for the LLM.
 
         Returns:
-            ChAIResponse: A response object that:
+            ChAITeapot: A response object that:
                 - Can be printed as a string to show the full response
-                - Has structured components accessible via .teapot attribute:
-                    - For DataFrame and visualisation requests: .teapot.suggestions
-                    - For image requests: .teapot.analysis, .teapot.code, .teapot.path
-                    - For chart requests: .teapot.code, .teapot.path
+                - Has structured components directly accessible:
+                    - For DataFrame and visualisation requests: .suggestions
+                    - For image requests: .analysis, .code, .path
+                    - For chart requests: .code, .path
 
         Raises:
             ChAIError: If there's an error processing the request.
@@ -244,7 +260,7 @@ class chAI:
             raw_text = (
                 json.dumps(raw_output) if isinstance(raw_output, dict) else raw_output
             )
-            return ChAIResponse(raw_text=raw_text, teapot=ChAITeapot(**teapot_data))
+            return ChAITeapot(raw_text=raw_text, **teapot_data)
         except Exception as e:
             logger.error(f"Error in steep: {str(e)}")
             raise ChAIError(f"Failed to process request: {e}")
