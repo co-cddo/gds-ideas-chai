@@ -71,7 +71,7 @@ def test_config_successful_initialization(mock_env):
         {
             "AWS_PROFILE": "test-profile",
             "LLM_REGION": "us-west-2",
-            "LLM_MODEL": "anthropic.claude-v3:5",
+            "LLM_MODEL": "anthropic.claude-3-5-sonnet-20240620-v1:0",
         }
     )
 
@@ -89,7 +89,7 @@ def test_config_direct_assignment():
         llm_model="anthropic.claude-3-5-sonnet-20240620-v1:0",
     )
     assert config.AWS_PROFILE == "direct-profile"
-    assert config.LLM_REGION == AWSRegion.EU_WEST_1
+    assert config.LLM_REGION == AWSRegion.US_EAST_1
     assert config.LLM_MODEL == LLMModel.CLAUDE_SONNET_3_5
 
 
