@@ -47,55 +47,54 @@ jobs:
       - name: Update version if requested
         if: github.event.inputs.version_bump != 'none'
         run: |
-          # Get current version
-          CURRENT_VERSION=$(grep -m 1 'version = ' pyproject.toml | sed -E 's/.*version = "([^"]+)".*/\1/')
-          
-          # Parse the current version
-          MAJOR=$(echo $CURRENT_VERSION | cut -d. -f1)
-          MINOR=$(echo $CURRENT_VERSION | cut -d. -f2)
-          PATCH=$(echo $CURRENT_VERSION | cut -d. -f3 | sed 's/[^0-9].*//')
-          
-          # Bump according to input
-          if [ "${{ github.event.inputs.version_bump }}" == "patch" ]; then
-            NEW_VERSION="${MAJOR}.${MINOR}.$((PATCH + 1))"
-          elif [ "${{ github.event.inputs.version_bump }}" == "minor" ]; then
-            NEW_VERSION="${MAJOR}.$((MINOR + 1)).0"
-          elif [ "${{ github.event.inputs.version_bump }}" == "major" ]; then
-            NEW_VERSION="$((MAJOR + 1)).0.0"
-          fi
-          
-          # Update version in pyproject.toml
-          sed -i "s/version = \"${CURRENT_VERSION}\"/version = \"${NEW_VERSION}\"/" pyproject.toml
-          echo "Updated version to: ${NEW_VERSION}"
-          
-          # Commit and tag if deploying to PyPI
-          if [ "${{ github.event.inputs.deploy_target }}" == "pypi" ]; then
-            git config --local user.email "github-actions[bot]@users.noreply.github.com"
-            git config --local user.name "github-actions[bot]"
-            git add pyproject.toml
-            git commit -m "Bump version to ${NEW_VERSION}"
-            git tag -a "v${NEW_VERSION}" -m "Version ${NEW_VERSION}"
-            git push --follow-tags
-          fi
+            # Get current version
+            CURRENT_VERSION=$(grep -m 1 'version = ' pyproject.toml | sed -E 's/.*version = "([^"]+)".*/\1/')
+            
+            # Parse the current version
+            MAJOR=$(echo $CURRENT_VERSION | cut -d. -f1)
+            MINOR=$(echo $CURRENT_VERSION | cut -d. -f2)
+            PATCH=$(echo $CURRENT_VERSION | cut -d. -f3 | sed 's/[^0-9].*//')
+            
+            # Bump according to input
+            if [ "${{ github.event.inputs.version_bump }}" == "patch" ]; then
+                NEW_VERSION="${MAJOR}.${MINOR}.$((PATCH + 1))"
+            elif [ "${{ github.event.inputs.version_bump }}" == "minor" ]; then
+                NEW_VERSION="${MAJOR}.$((MINOR + 1)).0"
+            elif [ "${{ github.event.inputs.version_bump }}" == "major" ]; then
+                NEW_VERSION="$((MAJOR + 1)).0.0"
+            fi
+            
+            # Update version in pyproject.toml
+            sed -i "s/version = \"${CURRENT_VERSION}\"/version = \"${NEW_VERSION}\"/" pyproject.toml
+            echo "Updated version to: ${NEW_VERSION}"
+            
+            # Commit and tag if deploying to PyPI
+            if [ "${{ github.event.inputs.deploy_target }}" == "pypi" ]; then
+                git config --local user.email "github-actions[bot]@users.noreply.github.com"
+                git config --local user.name "github-actions[bot]"
+                git add pyproject.toml
+                git commit -m "Bump version to ${NEW_VERSION}"
+                git tag -a "v${NEW_VERSION}" -m "Version ${NEW_VERSION}"
+                git push --follow-tags
+            fi
       
       - name: Clean previous builds
         run: |
-          rm -rf dist/
-          rm -rf build/
+            rm -rf dist/
+            rm -rf build/
       
       - name: Build package
         run: uv build
       
       - name: Publish to TestPyPI
         if: github.event.inputs.deploy_target == 'testpypi'
-        env:
-          TESTPYPI_TOKEN: ${{ secrets.TEST_PYPI_CHAI_LLM }}
         run: |
-          UV_PUBLISH_REPOSITORY=https://test.pypi.org/legacy/ UV_PUBLISH_TOKEN=${{ secrets.TEST_PYPI_CHAI_LLM }} uv publish
+            uv publish \
+            --repository https://test.pypi.org/legacy/ \
+            --token ${{ secrets.TEST_PYPI_API_TOKEN }}
       
       - name: Publish to PyPI
         if: github.event.inputs.deploy_target == 'pypi'
-        env:
-          PYPI_TOKEN: ${{ secrets.PYPI_CHAI_LLM }}
         run: |
-          UV_PUBLISH_TOKEN=${{ secrets.PYPI_CHAI_LLM }} uv publish
+            uv publish \
+            --token ${{ secrets.PYPI_CHAI_LLM }}
