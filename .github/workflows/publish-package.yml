@@ -81,5 +81,3 @@ jobs:
       - name: Publish to PyPI
         if: github.event.inputs.deploy_target == 'pypi'
         uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          password: ${{ secrets.PYPI_CHAI_LLM }}
