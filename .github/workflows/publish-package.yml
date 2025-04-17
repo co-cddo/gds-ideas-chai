@@ -88,11 +88,7 @@ jobs:
       
       - name: Publish to TestPyPI
         if: github.event.inputs.deploy_target == 'testpypi'
-        env:
-            TOKEN: ${{ secrets.TEST_PYPI_CHAI_LLM }}
-        run: |
-            echo "Publishing to TestPyPI..."
-            uv publish --token "${TOKEN}" --publish-url https://test.pypi.org/legacy/
+        run: uv publish --token "${{ secrets.TEST_PYPI_CHAI_LLM }}" --publish-url https://test.pypi.org/legacy/
 
       
       - name: Publish to PyPI
