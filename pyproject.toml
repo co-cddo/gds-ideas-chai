@@ -55,8 +55,9 @@ docs = [
     ]
 
 [project.urls]
-Homepage = "https://github.com/co-cddo/gds-ideas-chai"
-"Bug Tracker" = "https://github.com/co-cddo/gds-ideas-chai/issues"
+Homepage = "https://co-cddo.github.io/gds-ideas-chai/"
+Repository = "https://github.com/co-cddo/gds-ideas-chai"
+Issues = "https://github.com/co-cddo/gds-ideas-chai/issues"
 
 [tool.hatch.build]
 packages = ["src/chai"]
