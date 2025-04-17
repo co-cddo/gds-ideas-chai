@@ -17,6 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write # Needed for pushing tags/commits
+      id-token: write # Need this for PyPi verification
     steps:
       - uses: actions/checkout@v4
         with:
