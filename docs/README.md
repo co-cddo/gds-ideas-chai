@@ -6,7 +6,7 @@ An LLM-powered charting package to enable visualisation suggestion, image review
 Currently the library has only been tested with compatible Anthropic models. See the [AWS documentation](https://docs.aws.amazon.com/bedrock/latest/userguide/models-supported.html) for models that have compatible input modalities for image analysis.
 
 
-## Prerequisites
+## Prerequisites 
 - An environment with Python 3.13 or greater
 - Foundation model access approved within AWS for models referenced in constants.py
 - OPTIONAL: A .env file with an entry for AWS_PROFILE=. This profile/user should have sufficient permissions to execute a API calls without requiring MFA authentication in e.g. a notebook. Alternatively, users can configure the chAI runtime at initialisation.
