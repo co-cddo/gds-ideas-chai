@@ -3,8 +3,8 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "chai"
-version = "0.1.0"
+name = "chai-llm"
+version = "0.1.1"
 authors = [
     {name = "Jose Orjales", email = "jose.orjales@digital.cabinet-office.gov.uk"},
 ]
