@@ -1,5 +1,4 @@
 name: Publish Package
-
 # This workflow is manually triggered
 on:
   workflow_dispatch:
@@ -12,26 +11,16 @@ on:
         options:
           - testpypi
           - pypi
-      version_bump:
-        description: 'Version bump type'
-        required: true
-        default: 'patch'
-        type: choice
-        options:
-          - none
-          - patch
-          - minor
-          - major
 
 jobs:
   deploy-package:
     runs-on: ubuntu-latest
     permissions:
-      contents: write  # Needed for pushing tags/commits
+      contents: write # Needed for pushing tags/commits
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Fetch all history for version calculation
+          fetch-depth: 0 # Fetch all history for version calculation
       
       - name: Install uv and set the python version
         uses: astral-sh/setup-uv@v5
@@ -44,55 +33,50 @@ jobs:
       - name: Run tests
         run: uv run pytest
       
-      - name: Update version if requested
-        if: github.event.inputs.version_bump != 'none'
+      - name: Get current version
+        id: get_version
         run: |
-            # Get current version
-            CURRENT_VERSION=$(grep -m 1 'version = ' pyproject.toml | sed -E 's/.*version = "([^"]+)".*/\1/')
-            
-            # Parse the current version
-            MAJOR=$(echo $CURRENT_VERSION | cut -d. -f1)
-            MINOR=$(echo $CURRENT_VERSION | cut -d. -f2)
-            PATCH=$(echo $CURRENT_VERSION | cut -d. -f3 | sed 's/[^0-9].*//')
-            
-            # Bump according to input
-            if [ "${{ github.event.inputs.version_bump }}" == "patch" ]; then
-                NEW_VERSION="${MAJOR}.${MINOR}.$((PATCH + 1))"
-            elif [ "${{ github.event.inputs.version_bump }}" == "minor" ]; then
-                NEW_VERSION="${MAJOR}.$((MINOR + 1)).0"
-            elif [ "${{ github.event.inputs.version_bump }}" == "major" ]; then
-                NEW_VERSION="$((MAJOR + 1)).0.0"
-            fi
-            
-            # Update version in pyproject.toml
-            sed -i "s/version = \"${CURRENT_VERSION}\"/version = \"${NEW_VERSION}\"/" pyproject.toml
-            echo "Updated version to: ${NEW_VERSION}"
-            
-            # Commit and tag if deploying to PyPI
-            if [ "${{ github.event.inputs.deploy_target }}" == "pypi" ]; then
-                git config --local user.email "github-actions[bot]@users.noreply.github.com"
-                git config --local user.name "github-actions[bot]"
-                git add pyproject.toml
-                git commit -m "Bump version to ${NEW_VERSION}"
-                git tag -a "v${NEW_VERSION}" -m "Version ${NEW_VERSION}"
-                git push --follow-tags
-            fi
+          # Get current version from pyproject.toml
+          CURRENT_VERSION=$(grep -m 1 'version = ' pyproject.toml | sed -E 's/.*version = "([^"]+)".*/\1/')
+          echo "Current version: $CURRENT_VERSION"
+          echo "version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+          
+          # Create a tag if deploying to PyPI
+          if [ "${{ github.event.inputs.deploy_target }}" == "pypi" ]; then
+              git config --local user.email "github-actions[bot]@users.noreply.github.com"
+              git config --local user.name "github-actions[bot]"
+              git tag -a "v${CURRENT_VERSION}" -m "Version ${CURRENT_VERSION}"
+              git push --tags
+          fi
       
       - name: Clean previous builds
         run: |
-            rm -rf dist/
-            rm -rf build/
+          # Completely delete and recreate dist and build directories
+          rm -rf dist/
+          rm -rf build/
+          rm -rf *.egg-info/
+          mkdir -p dist
+          mkdir -p build
+          
+          # Verify they're empty
+          echo "Checking dist directory:"
+          ls -la dist/ || echo "dist/ is empty"
+          echo "Checking build directory:"
+          ls -la build/ || echo "build/ is empty"
       
       - name: Build package
-        run: uv build
+        run: |
+          # Build the package
+          uv build
+          
+          # List the generated files to verify correct versioning
+          echo "Files in dist directory:"
+          ls -la dist/
       
       - name: Publish to TestPyPI
         if: github.event.inputs.deploy_target == 'testpypi'
         run: uv publish --token "${{ secrets.TEST_PYPI_CHAI_LLM }}" --publish-url https://test.pypi.org/legacy/
-
       
       - name: Publish to PyPI
         if: github.event.inputs.deploy_target == 'pypi'
-        run: |
-            uv publish \
-            --token ${{ secrets.PYPI_CHAI_LLM }}
+        run: uv publish --token "${{ secrets.PYPI_CHAI_LLM }}"
