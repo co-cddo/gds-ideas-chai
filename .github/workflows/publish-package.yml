@@ -90,8 +90,9 @@ jobs:
         if: github.event.inputs.deploy_target == 'testpypi'
         run: |
             uv publish \
-            --repository https://test.pypi.org/legacy/ \
-            --token ${{ secrets.TEST_PYPI_API_TOKEN }}
+            --token ${{ secrets.TEST_PYPI_API_TOKEN }} \
+            --publish-url https://test.pypi.org/legacy/ 
+
       
       - name: Publish to PyPI
         if: github.event.inputs.deploy_target == 'pypi'
